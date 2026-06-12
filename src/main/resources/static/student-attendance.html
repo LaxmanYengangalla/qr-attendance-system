@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Attendance</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --panel: rgba(255,255,255,.94);
+            --text: #172033;
+            --muted: #64748b;
+            --line: #dbe5f5;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(135deg, rgba(37,99,235,.70), rgba(6,182,212,.50)),
+                url("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80") center/cover fixed;
+        }
+
+        .shell {
+            width: min(820px, 94vw);
+            margin: 24px auto;
+            background: var(--panel);
+            border-radius: 16px;
+            padding: 26px;
+            box-shadow: 0 25px 70px rgba(15,23,42,.25);
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            color: white;
+            font-size: 26px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        h1 { margin: 0 0 4px; font-size: 28px; }
+        p { margin: 0; color: var(--muted); line-height: 1.5; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .info {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px;
+            background: white;
+        }
+
+        .info span {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .info strong {
+            display: block;
+            font-size: 16px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 16px 0;
+        }
+
+        button {
+            min-height: 46px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: white;
+            background: var(--primary);
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        button.secondary {
+            color: var(--text);
+            background: white;
+            border: 1px solid var(--line);
+        }
+
+        button:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        #html5QrReader,
+        #cameraPreview {
+            width: 100%;
+            max-height: 430px;
+            display: none;
+            border-radius: 12px;
+            background: #0f172a;
+            object-fit: cover;
+            margin-top: 16px;
+        }
+
+        #html5QrReader video {
+            border-radius: 12px;
+        }
+
+        .message {
+            min-height: 28px;
+            margin-top: 14px;
+            font-weight: 700;
+            color: var(--muted);
+        }
+
+        .message.success { color: var(--success); }
+        .message.error { color: var(--danger); }
+        .message.warning { color: var(--warning); }
+
+        .help {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(245, 158, 11, .13);
+            color: #92400e;
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        @media (max-width: 760px) {
+            .top,
+            .info-grid,
+            .actions {
+                grid-template-columns: 1fr;
+                display: grid;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="shell">
+    <div class="top">
+        <div class="icon"><i class="fa-solid fa-qrcode"></i></div>
+        <div>
+            <h1>Mark Attendance</h1>
+            <p>Scan the QR or use the direct button below.</p>
+        </div>
+    </div>
+
+    <section class="info-grid">
+        <div class="info"><span>Subject</span><strong id="courseName">Loading...</strong></div>
+        <div class="info"><span>Lecturer/Professor</span><strong id="lecturerName">Loading...</strong></div>
+        <div class="info"><span>Expires at</span><strong id="expiresAt">Loading...</strong></div>
+    </section>
+
+    <div class="actions">
+        <button id="markBtn" onclick="markAttendance()">
+            <i class="fa-solid fa-check"></i> Mark Attendance
+        </button>
+        <button class="secondary" onclick="startCamera()">
+            <i class="fa-solid fa-camera"></i> Scan QR
+        </button>
+    </div>
+
+    <video id="cameraPreview" autoplay muted playsinline></video>
+    <div id="html5QrReader"></div>
+    <canvas id="scanCanvas" style="display:none;"></canvas>
+
+    <div id="message" class="message"></div>
+    <div id="helpBox" class="help"></div>
+</main>
+
+<script>
+    const API_BASE = window.location.origin;
+    const params = new URLSearchParams(window.location.search);
+    let sessionId = params.get("sessionId") || params.get("qrSessionId");
+    let studentId = null;
+    const video = document.getElementById("cameraPreview");
+    const html5QrReader = document.getElementById("html5QrReader");
+    const canvas = document.getElementById("scanCanvas");
+    const messageBox = document.getElementById("message");
+    const helpBox = document.getElementById("helpBox");
+    let cameraStream;
+    let scanTimer;
+    let barcodeDetector;
+    let scannerMode = null;
+    let scanInProgress = false;
+    let html5Scanner = null;
+    let html5ScannerRunning = false;
+    let marked = false;
+
+    if (!sessionId) {
+        showMessage("Attendance session ID is missing.", "error");
+        document.getElementById("markBtn").disabled = true;
+    } else {
+        prepareStudentSession();
+    }
+
+    function prepareStudentSession() {
+        fetch(`${API_BASE}/users/student/session`)
+            .then(response => response.json())
+            .then(student => {
+                if (!student || !student.id) {
+                    redirectToLogin();
+                    return;
+                }
+
+                studentId = student.id;
+                localStorage.setItem("studentId", student.id);
+                localStorage.setItem("studentName", student.name || "");
+                localStorage.setItem("studentEmail", student.email || "");
+                loadSession();
+                window.setTimeout(startCamera, 600);
+            })
+            .catch(redirectToLogin);
+    }
+
+    function redirectToLogin() {
+        const returnTo = encodeURIComponent(`/student/attendance/${sessionId}`);
+        window.location.href = `student.html?returnTo=${returnTo}`;
+    }
+
+    function loadSession() {
+        fetch(`${API_BASE}/api/student/attendance/session/${encodeURIComponent(sessionId)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    showMessage(data.message || "Session not found.", "error");
+                    document.getElementById("markBtn").disabled = true;
+                    return;
+                }
+
+                document.getElementById("courseName").innerText = data.courseName || "Unknown Subject";
+                document.getElementById("lecturerName").innerText = data.lecturerName || "Lecturer/Professor";
+                document.getElementById("expiresAt").innerText = data.endTime ? new Date(data.endTime).toLocaleString() : "--";
+
+                if (!data.active) {
+                    showMessage("This attendance session has expired.", "error");
+                    document.getElementById("markBtn").disabled = true;
+                } else {
+                    showMessage("Ready. Camera will start if this browser allows it.");
+                }
+            })
+            .catch(() => showMessage("Could not load attendance session.", "error"));
+    }
+
+    async function startCamera() {
+        if (marked || cameraStream || html5ScannerRunning) {
+            return;
+        }
+
+        if (!window.isSecureContext) {
+            showMessage("Camera scanning requires HTTPS. Open this system using HTTPS or ngrok.", "warning");
+            showHelp("You can still use Mark Attendance. Android Chrome blocks camera on http://computer-ip:8085.");
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showMessage("This browser does not support camera access.", "error");
+            showHelp("Use the Mark Attendance button, or try Android Chrome on HTTPS.");
+            return;
+        }
+
+        try {
+            if (typeof Html5Qrcode === "function") {
+                await startHtml5Scanner();
+                return;
+            }
+
+            showMessage("Requesting camera permission...");
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            video.srcObject = cameraStream;
+            video.style.display = "block";
+            await video.play();
+
+            scannerMode = getScannerMode();
+            if (!scannerMode) {
+                showMessage("QR scanning library could not load.", "warning");
+                showHelp("Check internet access for the scanner library, then reload the page. You can still use Mark Attendance.");
+                stopCamera();
+                return;
+            }
+
+            if (scannerMode === "barcode-detector") {
+                barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+            }
+
+            showMessage("Camera started. Keep the QR inside the camera box.", "success");
+            scanTimer = window.setInterval(scanFrame, 180);
+        } catch (error) {
+            showCameraError(error);
+        }
+    }
+
+    async function startHtml5Scanner() {
+        showMessage("Starting QR scanner...");
+        html5QrReader.style.display = "block";
+        video.style.display = "none";
+
+        if (!html5Scanner) {
+            html5Scanner = new Html5Qrcode("html5QrReader");
+        }
+
+        html5ScannerRunning = true;
+        await html5Scanner.start(
+            { facingMode: "environment" },
+            {
+                fps: 15,
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const boxSize = Math.floor(minEdge * 0.94);
+                    return { width: boxSize, height: boxSize };
+                },
+                aspectRatio: 1.333,
+                disableFlip: false
+            },
+            handleScannedQrText,
+            function() {}
+        );
+
+        showMessage("Camera started. Keep the QR inside the square scanner box.", "success");
+    }
+
+    async function scanFrame() {
+        if (!cameraStream || marked || scanInProgress || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            return;
+        }
+
+        scanInProgress = true;
+
+        try {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const qrText = await readQrText(context);
+            if (qrText) {
+                handleScannedQrText(qrText);
+            }
+        } catch (error) {
+            showMessage("Scanner error. Use the Mark Attendance button or restart the camera.", "error");
+            stopCamera();
+        } finally {
+            scanInProgress = false;
+        }
+    }
+
+    function handleScannedQrText(qrText) {
+        if (marked) {
+            return;
+        }
+
+        showMessage("QR detected. Checking session...");
+        const scannedSessionId = getSessionIdFromQr(qrText);
+        if (scannedSessionId) {
+            sessionId = scannedSessionId;
+            markAttendance(scannedSessionId);
+            return;
+        }
+
+        showMessage("QR detected, but the session ID could not be read.", "error");
+        showHelp("Generate a fresh QR from the lecturer/professor page, then scan the full QR inside the scanner box.");
+    }
+
+    function getScannerMode() {
+        if ("BarcodeDetector" in window) {
+            return "barcode-detector";
+        }
+
+        if (typeof jsQR === "function") {
+            return "jsqr";
+        }
+
+        return null;
+    }
+
+    async function readQrText(context) {
+        if (scannerMode === "barcode-detector" && barcodeDetector) {
+            const codes = await barcodeDetector.detect(canvas);
+            if (codes.length > 0 && codes[0].rawValue) {
+                return codes[0].rawValue;
+            }
+        }
+
+        if (typeof jsQR !== "function") {
+            return null;
+        }
+
+        for (const area of getScanAreas(canvas.width, canvas.height)) {
+            const imageData = context.getImageData(area.x, area.y, area.width, area.height);
+            const directCode = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth"
+            });
+            if (directCode && directCode.data) {
+                return directCode.data;
+            }
+
+            boostContrast(imageData.data);
+            const contrastCode = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth"
+            });
+            if (contrastCode && contrastCode.data) {
+                return contrastCode.data;
+            }
+        }
+
+        return null;
+    }
+
+    function getScanAreas(width, height) {
+        const size = Math.min(width, height);
+        const centeredSquare = {
+            x: Math.floor((width - size) / 2),
+            y: Math.floor((height - size) / 2),
+            width: size,
+            height: size
+        };
+
+        const medium = Math.floor(size * 0.76);
+        const small = Math.floor(size * 0.56);
+
+        return [
+            { x: 0, y: 0, width, height },
+            centeredSquare,
+            {
+                x: Math.floor((width - medium) / 2),
+                y: Math.floor((height - medium) / 2),
+                width: medium,
+                height: medium
+            },
+            {
+                x: Math.floor((width - small) / 2),
+                y: Math.floor((height - small) / 2),
+                width: small,
+                height: small
+            }
+        ];
+    }
+
+    function boostContrast(pixels) {
+        for (let i = 0; i < pixels.length; i += 4) {
+            const gray = (pixels[i] * 0.299) + (pixels[i + 1] * 0.587) + (pixels[i + 2] * 0.114);
+            const value = gray > 128 ? 255 : 0;
+            pixels[i] = value;
+            pixels[i + 1] = value;
+            pixels[i + 2] = value;
+        }
+    }
+
+    function markAttendance(attendanceSessionId) {
+        if (marked) {
+            return;
+        }
+
+        const sessionToMark = attendanceSessionId || sessionId;
+        if (!sessionToMark) {
+            showMessage("Attendance session ID is missing.", "error");
+            return;
+        }
+
+        marked = true;
+        stopCamera();
+        showMessage("Marking attendance...");
+        fetch(`${API_BASE}/api/student/attendance/mark`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                sessionId: Number(sessionToMark)
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message || "Attendance response received.", data.success ? "success" : "error");
+                if (!data.success) {
+                    marked = false;
+                }
+            })
+            .catch(() => {
+                marked = false;
+                showMessage("Error marking attendance. Please try again.", "error");
+            });
+    }
+
+    function getSessionIdFromQr(qrText) {
+        try {
+            const url = new URL(qrText, window.location.origin);
+            const parts = url.pathname.split("/").filter(Boolean);
+            return url.searchParams.get("sessionId")
+                || url.searchParams.get("qrSessionId")
+                || parts[parts.length - 1];
+        } catch (error) {
+            const params = new URLSearchParams(qrText);
+            return params.get("sessionId")
+                || params.get("qrSessionId")
+                || String(qrText).split("/").filter(Boolean).pop();
+        }
+    }
+
+    function stopCamera() {
+        window.clearInterval(scanTimer);
+        scanTimer = null;
+
+        if (html5Scanner && html5ScannerRunning) {
+            html5ScannerRunning = false;
+            html5Scanner.stop()
+                .then(() => html5Scanner.clear())
+                .catch(() => {});
+        }
+
+        html5QrReader.style.display = "none";
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        scannerMode = null;
+        barcodeDetector = null;
+        scanInProgress = false;
+        video.pause();
+        video.srcObject = null;
+        video.style.display = "none";
+    }
+
+    function showCameraError(error) {
+        const name = error && error.name ? error.name : "";
+
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+            showMessage("Camera permission was denied.", "error");
+            showHelp("Open Chrome site settings, choose Camera, and allow this site. Then reload the page.");
+            return;
+        }
+
+        if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+            showMessage("No camera was found on this device.", "error");
+            showHelp("Use Mark Attendance to record attendance without scanning.");
+            return;
+        }
+
+        if (name === "NotReadableError" || name === "TrackStartError") {
+            showMessage("Camera is already used by another app.", "error");
+            showHelp("Close other camera apps or video calls, then try again.");
+            return;
+        }
+
+        if (name === "OverconstrainedError") {
+            showMessage("Rear camera was not available.", "warning");
+            showHelp("Use Mark Attendance, or try again with another browser.");
+            return;
+        }
+
+        showMessage("Could not start camera. You can still use Mark Attendance.", "warning");
+    }
+
+    function showHelp(text) {
+        helpBox.style.display = "block";
+        helpBox.innerText = text;
+    }
+
+    function showMessage(text, type) {
+        messageBox.className = type ? `message ${type}` : "message";
+        messageBox.innerText = text;
+    }
+
+    window.addEventListener("beforeunload", stopCamera);
+</script>
+</body>
+</html>

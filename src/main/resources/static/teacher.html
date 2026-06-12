@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lecturer/Professor Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --page: #eef5ff;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --line: #dbe5f5;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+        }
+
+        body.dark {
+            --page: #0f172a;
+            --panel: #111827;
+            --text: #f8fafc;
+            --muted: #cbd5e1;
+            --line: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(135deg, rgba(37,99,235,.16), rgba(6,182,212,.16)),
+                var(--page);
+        }
+
+        .shell {
+            width: min(1120px, 94vw);
+            margin: 0 auto;
+            padding: 28px 0;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .title h1 {
+            margin: 0 0 6px;
+            font-size: 30px;
+        }
+
+        .title p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        button {
+            min-height: 42px;
+            border: none;
+            border-radius: 8px;
+            padding: 0 16px;
+            cursor: pointer;
+            color: white;
+            background: var(--primary);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+        }
+
+        button.secondary {
+            color: var(--text);
+            background: var(--panel);
+            border: 1px solid var(--line);
+        }
+
+        button.secondary:hover {
+            background: rgba(37, 99, 235, .08);
+        }
+
+        button.danger {
+            background: var(--danger);
+        }
+
+        button:disabled {
+            opacity: .58;
+            cursor: not-allowed;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 430px) 1fr;
+            gap: 18px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 22px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, .08);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        select {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0 12px;
+            background: var(--panel);
+            color: var(--text);
+            font-size: 15px;
+            outline: none;
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .metric {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px;
+            min-height: 90px;
+        }
+
+        .metric i {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .metric span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .qr-area {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .qr-frame {
+            display: grid;
+            place-items: center;
+            min-height: 330px;
+            border: 1px dashed var(--line);
+            border-radius: 8px;
+            background: rgba(37, 99, 235, .05);
+        }
+
+        #qrImage {
+            display: none;
+            width: 280px;
+            height: 280px;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid var(--line);
+        }
+
+        .empty-qr {
+            text-align: center;
+            color: var(--muted);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(245, 158, 11, .14);
+            color: var(--warning);
+            font-weight: 700;
+        }
+
+        .status-pill.active {
+            background: rgba(22, 163, 74, .14);
+            color: var(--success);
+        }
+
+        .status-pill.expired {
+            background: rgba(220, 38, 38, .14);
+            color: var(--danger);
+        }
+
+        .session-details {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+            color: var(--muted);
+        }
+
+        .detail-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 10px;
+        }
+
+        .detail-line strong {
+            color: var(--text);
+        }
+
+        .message {
+            min-height: 22px;
+            margin-top: 14px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .link-box {
+            display: none;
+            margin-top: 16px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px;
+            background: rgba(37, 99, 235, .05);
+        }
+
+        .link-box label {
+            margin-bottom: 8px;
+        }
+
+        .link-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+
+        .link-row input {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0 10px;
+            color: var(--text);
+            background: var(--panel);
+        }
+
+        .share-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .access-warning {
+            display: none;
+            margin-top: 14px;
+            border: 1px solid rgba(245, 158, 11, .35);
+            background: rgba(245, 158, 11, .12);
+            color: #92400e;
+            border-radius: 8px;
+            padding: 12px;
+            line-height: 1.5;
+            font-weight: 700;
+        }
+
+        @media (max-width: 860px) {
+            .topbar,
+            .grid,
+            .qr-area {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                display: grid;
+            }
+
+            .actions {
+                justify-content: flex-start;
+            }
+
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="shell">
+    <header class="topbar">
+        <div class="title">
+            <h1>Lecturer/Professor Dashboard</h1>
+            <p id="teacherName">Welcome, Lecturer/Professor</p>
+        </div>
+        <div class="actions">
+            <button class="secondary" onclick="toggleTheme()" title="Toggle theme">
+                <i class="fa-solid fa-circle-half-stroke"></i>
+            </button>
+            <button class="danger" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <section class="grid">
+        <div class="panel">
+            <label for="courseSelect">Course</label>
+            <select id="courseSelect">
+                <option value="">Loading courses...</option>
+            </select>
+
+            <div class="control-row">
+                <button id="generateBtn" onclick="generateQR()">
+                    <i class="fa-solid fa-qrcode"></i> Start QR
+                </button>
+                <button class="secondary" onclick="clearQR()">
+                    <i class="fa-solid fa-xmark"></i> Clear
+                </button>
+            </div>
+
+            <div class="control-row">
+                <button class="secondary" onclick="copyStudentLink()">
+                    <i class="fa-solid fa-link"></i> Copy Link
+                </button>
+                <button class="secondary" onclick="shareStudentLink()">
+                    <i class="fa-solid fa-share-nodes"></i> Share Link
+                </button>
+            </div>
+
+            <div class="control-row">
+                <button class="secondary" onclick="refreshPresentCount()">
+                    <i class="fa-solid fa-rotate"></i> Refresh
+                </button>
+                <button class="secondary" onclick="openStudentLink()">
+                    <i class="fa-solid fa-up-right-from-square"></i> Open Link
+                </button>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric">
+                    <i class="fa-solid fa-user-check"></i>
+                    <strong id="presentCount">0</strong>
+                    <span>Present now</span>
+                </div>
+                <div class="metric">
+                    <i class="fa-solid fa-clock"></i>
+                    <strong id="countdown">--:--</strong>
+                    <span>Time left</span>
+                </div>
+                <div class="metric">
+                    <i class="fa-solid fa-hashtag"></i>
+                    <strong id="sessionId">--</strong>
+                    <span>Session ID</span>
+                </div>
+            </div>
+
+            <div id="message" class="message"></div>
+            <div id="accessWarning" class="access-warning"></div>
+
+            <div id="studentLinkBox" class="link-box">
+                <label for="studentLinkInput">Student attendance link</label>
+                <div class="link-row">
+                    <input id="studentLinkInput" type="text" readonly>
+                    <button class="secondary" onclick="copyStudentLink()">Copy</button>
+                </div>
+                <div class="share-row">
+                    <button class="secondary" onclick="shareStudentLink()">Share</button>
+                    <button class="secondary" onclick="openStudentLink()">Open</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="qr-area">
+                <div class="qr-frame">
+                    <img id="qrImage" alt="Attendance QR code">
+                    <div id="emptyQr" class="empty-qr">
+                        <i class="fa-solid fa-qrcode fa-3x"></i>
+                        <p>Select a course and start a QR session.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <div id="statusPill" class="status-pill">
+                        <i class="fa-solid fa-circle-pause"></i> Not started
+                    </div>
+
+                    <div class="session-details">
+                        <div class="detail-line">
+                            <span>Course</span>
+                            <strong id="selectedCourse">--</strong>
+                        </div>
+                        <div class="detail-line">
+                            <span>Generated at</span>
+                            <strong id="generatedAt">--</strong>
+                        </div>
+                        <div class="detail-line">
+                            <span>Expires at</span>
+                            <strong id="expiresAt">--</strong>
+                        </div>
+                        <div class="detail-line">
+                            <span>Student link</span>
+                            <strong id="linkStatus">Not ready</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const API_BASE = window.location.origin;
+    let activeSession = null;
+    let countdownTimer = null;
+    let presentCountTimer = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        guardTeacherAccess();
+        applySavedTheme();
+        loadTeacher();
+        loadCourses();
+    });
+
+    function guardTeacherAccess() {
+        if (localStorage.getItem("role") !== "TEACHER") {
+            alert("Access denied");
+            window.location.href = "login.html";
+        }
+    }
+
+    function applySavedTheme() {
+        if (localStorage.getItem("theme") === "dark") {
+            document.body.classList.add("dark");
+        }
+    }
+
+    function loadTeacher() {
+        const email = localStorage.getItem("email") || localStorage.getItem("teacherName") || "Lecturer/Professor";
+        document.getElementById("teacherName").innerText = `Welcome, ${email}`;
+    }
+
+    function loadCourses() {
+        fetch(`${API_BASE}/courses`)
+            .then(response => response.json())
+            .then(courses => {
+                const select = document.getElementById("courseSelect");
+                select.innerHTML = "<option value=''>Select course</option>";
+
+                courses.forEach(course => {
+                    const option = document.createElement("option");
+                    option.value = course.id;
+                    option.textContent = `${course.courseName} (ID ${course.id})`;
+                    option.dataset.name = course.courseName;
+                    select.appendChild(option);
+                });
+
+                if (courses.length === 0) {
+                    select.innerHTML = "<option value=''>No courses available</option>";
+                }
+            })
+            .catch(() => showMessage("Could not load courses. Please check the server.", true));
+    }
+
+    function generateQR() {
+        if (activeSession) {
+            showMessage("A QR session is already running.", true);
+            return;
+        }
+
+        const select = document.getElementById("courseSelect");
+        const courseId = select.value;
+
+        if (!courseId) {
+            showMessage("Please select a course first.", true);
+            return;
+        }
+
+        setGenerateButton(false);
+        showMessage("Starting QR session...");
+
+        fetch(`${API_BASE}/qr/start-session-info?courseId=${encodeURIComponent(courseId)}&role=TEACHER`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Unable to start session");
+                }
+                return response.json();
+            })
+            .then(session => {
+                activeSession = session;
+                activeSession.courseName = select.options[select.selectedIndex].dataset.name || "Selected course";
+                renderSession(session);
+                startTimers(new Date(session.endTime));
+                refreshPresentCount();
+                presentCountTimer = setInterval(refreshPresentCount, 5000);
+                showMessage("QR session started.");
+            })
+            .catch(() => {
+                setGenerateButton(true);
+                showMessage("Could not start QR session. Check course and server.", true);
+            });
+    }
+
+    function renderSession(session) {
+        const qrImage = document.getElementById("qrImage");
+        qrImage.src = `${API_BASE}${session.qrImageUrl}`;
+        qrImage.style.display = "block";
+        document.getElementById("emptyQr").style.display = "none";
+
+        document.getElementById("sessionId").innerText = session.sessionId;
+        document.getElementById("selectedCourse").innerText = activeSession.courseName;
+        document.getElementById("generatedAt").innerText = formatDateTime(session.startTime);
+        document.getElementById("expiresAt").innerText = formatDateTime(session.endTime);
+        document.getElementById("linkStatus").innerText = "Ready";
+        document.getElementById("studentLinkInput").value = session.attendanceUrl || session.qrCodeData;
+        document.getElementById("studentLinkBox").style.display = "block";
+        renderAccessWarning(session);
+        setStatus("active", "Session active", "fa-circle-check");
+    }
+
+    function renderAccessWarning(session) {
+        const warning = document.getElementById("accessWarning");
+        const text = session.mobileAccessWarning || "";
+        warning.innerText = text;
+        warning.style.display = text ? "block" : "none";
+    }
+
+    function startTimers(endTime) {
+        clearInterval(countdownTimer);
+        countdownTimer = setInterval(() => updateCountdown(endTime), 1000);
+        updateCountdown(endTime);
+    }
+
+    function updateCountdown(endTime) {
+        const remaining = Math.max(0, endTime.getTime() - Date.now());
+        const totalSeconds = Math.floor(remaining / 1000);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+        const seconds = String(totalSeconds % 60).padStart(2, "0");
+        document.getElementById("countdown").innerText = `${minutes}:${seconds}`;
+
+        if (remaining <= 0) {
+            expireSession();
+        }
+    }
+
+    function refreshPresentCount() {
+        if (!activeSession) {
+            return;
+        }
+
+        fetch(`${API_BASE}/attendance/session/${activeSession.sessionId}/present-count`)
+            .then(response => response.text())
+            .then(count => {
+                document.getElementById("presentCount").innerText = count;
+            })
+            .catch(() => showMessage("Could not refresh present count.", true));
+    }
+
+    function copyStudentLink() {
+        const link = getStudentLink();
+        if (!link) {
+            showMessage("Start a QR session before copying the link.", true);
+            return;
+        }
+
+        copyText(link)
+            .then(() => showMessage("Attendance link copied successfully."))
+            .catch(() => showMessage("Could not copy automatically. Select and copy the visible link.", true));
+    }
+
+    function shareStudentLink() {
+        const link = getStudentLink();
+        if (!link) {
+            showMessage("Start a QR session before sharing the link.", true);
+            return;
+        }
+
+        if (navigator.share) {
+            navigator.share({
+                title: activeSession && activeSession.courseName
+                    ? `${activeSession.courseName} Attendance`
+                    : "Attendance Link",
+                text: "Open this link to mark attendance.",
+                url: link
+            }).catch(() => copyStudentLink());
+            return;
+        }
+
+        copyStudentLink();
+    }
+
+    function openStudentLink() {
+        const link = getStudentLink();
+        if (!link) {
+            showMessage("Start a QR session before opening the link.", true);
+            return;
+        }
+
+        window.open(link, "_blank");
+    }
+
+    function getStudentLink() {
+        if (!activeSession) {
+            return "";
+        }
+
+        return activeSession.attendanceUrl || activeSession.qrCodeData || "";
+    }
+
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise((resolve, reject) => {
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.setAttribute("readonly", "");
+            textarea.style.position = "fixed";
+            textarea.style.top = "0";
+            textarea.style.left = "-9999px";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+
+            try {
+                const copied = document.execCommand("copy");
+                copied ? resolve() : reject();
+            } catch (error) {
+                reject(error);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        });
+    }
+
+    function clearQR() {
+        clearInterval(countdownTimer);
+        clearInterval(presentCountTimer);
+        countdownTimer = null;
+        presentCountTimer = null;
+        activeSession = null;
+
+        document.getElementById("qrImage").removeAttribute("src");
+        document.getElementById("qrImage").style.display = "none";
+        document.getElementById("emptyQr").style.display = "block";
+        document.getElementById("presentCount").innerText = "0";
+        document.getElementById("countdown").innerText = "--:--";
+        document.getElementById("sessionId").innerText = "--";
+        document.getElementById("selectedCourse").innerText = "--";
+        document.getElementById("generatedAt").innerText = "--";
+        document.getElementById("expiresAt").innerText = "--";
+        document.getElementById("linkStatus").innerText = "Not ready";
+        document.getElementById("studentLinkInput").value = "";
+        document.getElementById("studentLinkBox").style.display = "none";
+        document.getElementById("accessWarning").style.display = "none";
+        setStatus("", "Not started", "fa-circle-pause");
+        setGenerateButton(true);
+        showMessage("");
+    }
+
+    function expireSession() {
+        clearInterval(countdownTimer);
+        clearInterval(presentCountTimer);
+        countdownTimer = null;
+        presentCountTimer = null;
+        setStatus("expired", "Session expired", "fa-circle-xmark");
+        setGenerateButton(true);
+        showMessage("QR session expired. Start a new one when ready.");
+        activeSession = null;
+    }
+
+    function setStatus(type, text, icon) {
+        const status = document.getElementById("statusPill");
+        status.className = `status-pill ${type}`;
+        status.innerHTML = `<i class="fa-solid ${icon}"></i> ${text}`;
+    }
+
+    function setGenerateButton(enabled) {
+        document.getElementById("generateBtn").disabled = !enabled;
+    }
+
+    function showMessage(text, isError) {
+        const message = document.getElementById("message");
+        message.innerText = text;
+        message.style.color = isError ? "var(--danger)" : "var(--muted)";
+    }
+
+    function formatDateTime(value) {
+        return new Date(value).toLocaleString();
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+</script>
+</body>
+</html>

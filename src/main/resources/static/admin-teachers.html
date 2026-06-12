@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Lecturer/Professors</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+        }
+
+        .sidebar {
+            width: 220px;
+            height: 100vh;
+            background: #1e293b;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            color: white;
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            padding: 15px 20px;
+            cursor: pointer;
+        }
+
+        .sidebar li:hover {
+            background: #334155;
+        }
+
+        .main-content {
+            margin-left: 240px;
+            padding: 25px;
+        }
+
+        .form-box, table {
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.08);
+        }
+
+        .form-box {
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        input {
+            padding: 10px;
+            margin: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <ul>
+        <li onclick="location.href='admin-dashboard.html'">Dashboard</li>
+        <li onclick="location.href='admin-students.html'">Students</li>
+        <li onclick="location.href='admin-teachers.html'">Lecturer/Professors</li>
+        <li onclick="location.href='admin-courses.html'">Courses</li>
+        <li onclick="location.href='report.html'">Attendance</li>
+        <li onclick="logout()">Logout</li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <h1>Lecturer Management</h1>
+
+    <div class="form-box">
+        <h3>Add Lecturer/Professor</h3>
+        <input type="text" id="name" placeholder="Lecturer/Professor Name">
+        <input type="email" id="email" placeholder="Email">
+        <input type="text" id="subject" placeholder="Subject">
+        <button onclick="addTeacher()">Add Lecturer/Professor</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Subject</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="teacherTableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+
+    if (localStorage.getItem("role") !== "ADMIN") {
+        alert("Access Denied");
+        window.location.href = "login.html";
+    }
+
+    function loadTeachers() {
+        fetch(`${API_BASE}/teachers`)
+            .then(response => response.json())
+            .then(data => {
+                let rows = "";
+
+                data.forEach(teacher => {
+                    rows += `
+                        <tr>
+                            <td>${teacher.id}</td>
+                            <td>${teacher.name}</td>
+                            <td>${teacher.email}</td>
+                            <td>${teacher.subject}</td>
+                            <td>
+                                <button class="delete-btn" onclick="deleteTeacher(${teacher.id})">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById("teacherTableBody").innerHTML = rows;
+            })
+            .catch(error => {
+                alert("Error loading lecturer/professors");
+            });
+    }
+
+    function addTeacher() {
+        const teacher = {
+            name: document.getElementById("name").value,
+            email: document.getElementById("email").value,
+            subject: document.getElementById("subject").value
+        };
+
+        fetch(`${API_BASE}/teachers`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(teacher)
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert("Lecturer/Professor added successfully");
+            location.reload();
+        })
+        .catch(error => {
+            alert("Error adding lecturer/professor");
+        });
+    }
+
+    function deleteTeacher(id) {
+        if (!confirm("Delete this lecturer/professor?")) {
+            return;
+        }
+
+        fetch(`${API_BASE}/teachers/${id}`, {
+            method: "DELETE"
+        })
+        .then(response => response.text())
+        .then(message => {
+            alert(message);
+            location.reload();
+        })
+        .catch(error => {
+            alert("Error deleting lecturer/professor");
+        });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    loadTeachers();
+</script>
+</body>
+</html>

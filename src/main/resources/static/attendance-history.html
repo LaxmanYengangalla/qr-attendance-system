@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance History</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+        }
+
+        .container {
+            width: 800px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0px 0px 15px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+            padding: 12px;
+        }
+
+        td {
+            padding: 10px;
+        }
+
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+			margin-bottom:15px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+		
+		.back-btn {
+		    background: #28a745;
+		}
+
+		.back-btn:hover {
+		    background: #1e7e34;
+		}
+		
+		.present {
+
+		    color: green;
+
+		    font-weight: bold;
+		}
+
+		.absent {
+
+		    color: red;
+
+		    font-weight: bold;
+		}
+		
+		/* DARK MODE */
+
+		.dark-mode {
+		    background: #1e1e1e !important;
+		    color: white;
+		}
+
+		.dark-mode .container {
+		    background: #2c2c2c;
+		    color: white;
+			
+		}
+
+		.dark-mode h2 {
+		    color: white;
+			
+		}
+
+		.dark-mode table,
+		.dark-mode th,
+		.dark-mode td {
+		    border: 1px solid #555;
+		}
+
+		.dark-mode th {
+		    background: #111;
+		    color: white;
+		}
+
+		.dark-mode td {
+		    background: #3a3a3a;
+		    color: white;
+		}
+
+		.dark-mode tr:nth-child(even) td {
+		    background: #444;
+		}
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Attendance History</h2>
+	<button onclick="toggleDarkMode()">
+	    Dark Mode
+	</button>
+
+    <table>
+
+        <thead>
+			<tr>
+			    <th>Date</th>
+			    <th>Time</th>
+			    <th>Course ID</th>
+			    <th>Status</th>
+			</tr>
+        </thead>
+
+        <tbody id="attendanceBody">
+
+        </tbody>
+
+    </table>
+	
+	</table>
+
+	
+
+    <button onclick="goBack()">
+        Back to Profile
+    </button>
+
+</div>
+
+<script>
+const API_BASE = window.location.origin;
+
+function loadAttendanceHistory() {
+
+    // ✅ Check login
+    const studentId = localStorage.getItem("studentId");
+
+    if (studentId == null) {
+
+        window.location.href = "student.html";
+
+        return;
+    }
+
+    // ✅ Fetch attendance history
+    fetch(`${API_BASE}/attendance/student/${studentId}`)
+
+        .then(response => response.json())
+
+        .then(data => {
+			
+			console.log(data);
+
+			let rows = "";
+
+			// ✅ EMPTY RECORD CHECK
+			if (data.length === 0) {
+
+			    rows = `
+			        <tr>
+			            <td colspan="4"
+			                style="
+			                    padding:20px;
+			                    color:red;
+			                    font-weight:bold;
+			                ">
+			                No Attendance Records Found
+			            </td>
+			        </tr>
+			    `;
+			}
+
+			else {
+
+			    data.forEach(attendance => {
+
+			        const attendanceDate =
+			            new Date(attendance.attendanceTime);
+
+			        rows += `
+			            <tr>
+
+			                <td>
+			                    ${attendanceDate
+			                        .toLocaleDateString('en-GB')}
+			                </td>
+
+			                <td>
+			                    ${attendanceDate
+			                        .toLocaleTimeString()}
+			                </td>
+
+			                <td>
+			                    ${attendance.courseId}
+			                </td>
+
+			                <td>
+
+			                    ${attendance.status.toUpperCase() === 'PRESENT'
+
+			                        ? "<span class='present'>Present</span>"
+
+			                        : "<span class='absent'>Absent</span>"
+			                    }
+
+			                </td>
+
+			            </tr>
+			        `;
+			    });
+			}
+
+            document.getElementById("attendanceBody").innerHTML = rows;
+        })
+
+        .catch(error => {
+
+            alert("Error loading attendance history");
+
+        });
+}
+
+// ✅ Page load
+window.onload = function () {
+
+    // LOAD HISTORY
+    loadAttendanceHistory();
+
+    // LOAD SAVED THEME
+    const savedTheme =
+        localStorage.getItem("theme");
+
+    if (savedTheme === "dark") {
+
+        document.body.classList.add("dark-mode");
+    }
+};
+
+// ✅ Back button
+
+function goBack() {
+
+    window.location.href = "student-profile.html";
+}
+
+function toggleDarkMode() {
+
+    document.body.classList.toggle("dark-mode");
+
+    // SAVE THEME
+    if (document.body.classList.contains("dark-mode")) {
+
+        localStorage.setItem("theme", "dark");
+
+    } else {
+
+        localStorage.setItem("theme", "light");
+    }
+}
+
+</script>
+
+</body>
+</html>

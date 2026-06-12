@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --page: #eef4ff;
+            --panel: #ffffff;
+            --ink: #242235;
+            --muted: #7a8193;
+            --line: #d9e0f2;
+            --nav: #25005c;
+            --violet: #5b21b6;
+            --blue: #2563eb;
+            --sky: #20c7e8;
+            --pink: #d946ef;
+            --amber: #f59e0b;
+            --green: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(91,33,182,.12), transparent 30%),
+                radial-gradient(circle at top right, rgba(32,199,232,.16), transparent 32%),
+                var(--page);
+        }
+
+        .top-nav {
+            height: 72px;
+            padding: 0 34px;
+            background: linear-gradient(90deg, #21004f, #2f006e);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            box-shadow: 0 14px 35px rgba(36, 0, 91, .22);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 250px;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+            color: white;
+            font-size: 20px;
+        }
+
+        .brand h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .brand p {
+            margin: 3px 0 0;
+            color: rgba(255,255,255,.62);
+            font-size: 12px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            color: rgba(255,255,255,.82);
+        }
+
+        .nav-actions button {
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(255,255,255,.22);
+            border-radius: 8px;
+            color: white;
+            background: rgba(255,255,255,.08);
+            cursor: pointer;
+        }
+
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.1);
+            font-weight: 700;
+        }
+
+        .main {
+            width: min(1120px, 94vw);
+            margin: 0 auto;
+            padding: 32px 0;
+        }
+
+        .quick-nav {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .quick-nav button {
+            min-height: 40px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 0 14px;
+            background: var(--panel);
+            color: var(--ink);
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(31,41,55,.08);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.45fr 1fr;
+            gap: 34px;
+        }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .panel, .kpi, .trend-strip {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 16px 35px rgba(31,41,55,.08);
+        }
+
+        .kpi {
+            min-height: 98px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .kpi-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            font-size: 24px;
+            color: white;
+        }
+
+        .kpi:nth-child(1) .kpi-icon { background: linear-gradient(135deg, var(--violet), var(--pink)); }
+        .kpi:nth-child(2) .kpi-icon { background: linear-gradient(135deg, var(--blue), var(--sky)); }
+        .kpi:nth-child(3) .kpi-icon { background: linear-gradient(135deg, var(--amber), #fb7185); }
+        .kpi:nth-child(4) .kpi-icon { background: linear-gradient(135deg, var(--green), var(--sky)); }
+
+        .kpi h2 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .kpi p {
+            margin: 5px 0 0;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .trend-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+        }
+
+        .trend {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .trend span {
+            color: var(--violet);
+        }
+
+        .panel {
+            padding: 18px;
+            margin-bottom: 22px;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .panel h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .chip {
+            min-height: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border-radius: 999px;
+            padding: 0 10px;
+            color: var(--violet);
+            background: rgba(91,33,182,.10);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .chart-tall {
+            position: relative;
+            height: 250px;
+        }
+
+        .chart-wide {
+            position: relative;
+            height: 270px;
+        }
+
+        .right-column .panel {
+            margin-bottom: 24px;
+        }
+
+        .spotlight-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .spotlight {
+            border: 1px solid var(--line);
+            border-radius: 999px 999px 8px 8px;
+            padding: 12px;
+            display: grid;
+            justify-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(91,33,182,.06), rgba(32,199,232,.07));
+            min-height: 160px;
+        }
+
+        .avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: white;
+            background: linear-gradient(135deg, #fb7185, #f59e0b);
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .spotlight strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 20px;
+        }
+
+        .spotlight span {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .score-ring {
+            display: grid;
+            place-items: center;
+            width: 132px;
+            height: 132px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at center, white 56%, transparent 57%),
+                conic-gradient(var(--violet) 0 75%, #edf2fb 75% 100%);
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .score-ring:nth-child(2) {
+            background:
+                radial-gradient(circle at center, white 56%, transparent 57%),
+                conic-gradient(var(--pink) 0 68%, #edf2fb 68% 100%);
+        }
+
+        .score-ring:nth-child(3) {
+            background:
+                radial-gradient(circle at center, white 56%, transparent 57%),
+                conic-gradient(var(--sky) 0 83%, #edf2fb 83% 100%);
+        }
+
+        .score-ring small {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 980px) {
+            .top-nav {
+                height: auto;
+                padding: 16px;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .dashboard-grid,
+            .kpis,
+            .trend-strip,
+            .spotlight-grid,
+            .score-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .score-ring {
+                width: min(180px, 70vw);
+                height: min(180px, 70vw);
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="top-nav">
+    <div class="brand">
+        <div class="brand-mark"><i class="fa-solid fa-qrcode"></i></div>
+        <div>
+            <h2>QR Attendance System</h2>
+            <p>Admin Performance Dashboard</p>
+        </div>
+    </div>
+
+    <div class="nav-actions">
+        <button onclick="location.href='admin-students.html'" title="Students"><i class="fa-solid fa-user-graduate"></i></button>
+        <button onclick="location.href='admin-courses.html'" title="Subjects"><i class="fa-solid fa-book-open"></i></button>
+        <button onclick="location.href='report.html'" title="Reports"><i class="fa-solid fa-chart-simple"></i></button>
+        <span id="liveClock">Loading...</span>
+        <div class="user-pill"><i class="fa-solid fa-user-shield"></i><span id="adminName">Admin</span></div>
+        <button onclick="logout()" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
+    </div>
+</header>
+
+<main class="main">
+    <div class="quick-nav">
+        <button onclick="location.href='admin-dashboard.html'"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+        <button onclick="location.href='admin-students.html'"><i class="fa-solid fa-user-graduate"></i> Students</button>
+        <button onclick="location.href='admin-teachers.html'"><i class="fa-solid fa-chalkboard-user"></i> Lecturer/Professors</button>
+        <button onclick="location.href='admin-courses.html'"><i class="fa-solid fa-book-open"></i> Subjects</button>
+        <button onclick="location.href='report.html'"><i class="fa-solid fa-file-export"></i> Attendance</button>
+    </div>
+
+    <section class="dashboard-grid">
+        <div>
+            <div class="kpis">
+                <div class="kpi"><div class="kpi-icon"><i class="fa-solid fa-users"></i></div><div><h2 id="studentCount">0</h2><p>Student Count</p></div></div>
+                <div class="kpi"><div class="kpi-icon"><i class="fa-solid fa-clipboard-check"></i></div><div><h2 id="attendancePercent">0%</h2><p>Student Attendance</p></div></div>
+                <div class="kpi"><div class="kpi-icon"><i class="fa-solid fa-book"></i></div><div><h2 id="courseCount">0</h2><p>Subjects</p></div></div>
+                <div class="kpi"><div class="kpi-icon"><i class="fa-solid fa-user-tie"></i></div><div><h2 id="teacherCount">0</h2><p>Lecturer/Professors</p></div></div>
+            </div>
+
+            <div class="trend-strip">
+                <div class="trend">Student Count <span id="studentTrend">0</span></div>
+                <div class="trend">Attendance <span id="attendanceTrend">0%</span></div>
+                <div class="trend">Subjects <span id="subjectTrend">0</span></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Student Count</h3>
+                    <span class="chip"><i class="fa-solid fa-layer-group"></i> Subject</span>
+                </div>
+                <div class="chart-tall"><canvas id="studentChart"></canvas></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Attendance Results</h3>
+                    <span class="chip"><i class="fa-solid fa-chart-column"></i> Present vs Absent</span>
+                </div>
+                <div class="chart-wide"><canvas id="attendanceChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Top Students</h3>
+                    <span class="chip"><i class="fa-solid fa-star"></i> Highlights</span>
+                </div>
+                <div id="spotlightGrid" class="spotlight-grid"></div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-head">
+                    <h3>Average Score</h3>
+                    <span class="chip"><i class="fa-solid fa-rotate"></i></span>
+                </div>
+                <div class="score-grid">
+                    <div class="score-ring"><div><span id="avgAttendance">0%</span><small>Attendance</small></div></div>
+                    <div class="score-ring"><div><span id="avgSubjects">0</span><small>Subjects</small></div></div>
+                    <div class="score-ring"><div><span id="avgTeachers">0</span><small>Lecturer/Professors</small></div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const API_BASE = window.location.origin;
+    const role = localStorage.getItem("role");
+    const email = localStorage.getItem("email");
+    let courseMap = {};
+    let studentChart;
+    let attendanceChart;
+
+    if (role !== "ADMIN") {
+        alert("Access Denied");
+        window.location.href = "login.html";
+    }
+
+    loadAdminName();
+    setInterval(() => {
+        document.getElementById("liveClock").innerText = `Last updated ${new Date().toLocaleTimeString()}`;
+    }, 1000);
+
+    Promise.all([
+        fetch(`${API_BASE}/dashboard/stats`).then(r => r.json()),
+        fetch(`${API_BASE}/attendance/all`).then(r => r.json()),
+        fetch(`${API_BASE}/students`).then(r => r.json()),
+        fetch(`${API_BASE}/courses`).then(r => r.json())
+    ])
+        .then(([stats, attendance, students, courses]) => {
+            courses.forEach(course => {
+                courseMap[course.id] = course.courseName;
+            });
+
+            const present = attendance.filter(item => item.status === "PRESENT").length;
+            const absent = attendance.filter(item => item.status === "ABSENT").length;
+            const percent = attendance.length === 0 ? 0 : (present * 100) / attendance.length;
+
+            document.getElementById("studentCount").innerText = stats.totalStudents;
+            document.getElementById("teacherCount").innerText = stats.totalTeachers;
+            document.getElementById("courseCount").innerText = stats.totalCourses;
+            document.getElementById("attendancePercent").innerText = `${percent.toFixed(1)}%`;
+            document.getElementById("studentTrend").innerText = stats.totalStudents;
+            document.getElementById("attendanceTrend").innerText = `${percent.toFixed(1)}%`;
+            document.getElementById("subjectTrend").innerText = stats.totalCourses;
+            document.getElementById("avgAttendance").innerText = `${percent.toFixed(1)}%`;
+            document.getElementById("avgSubjects").innerText = stats.totalCourses;
+            document.getElementById("avgTeachers").innerText = stats.totalTeachers;
+
+            renderSpotlights(students, attendance);
+            renderStudentChart(students);
+            renderAttendanceChart(attendance, courses);
+        })
+        .catch(() => alert("Failed to load dashboard data"));
+
+    function renderSpotlights(students, attendance) {
+        const byStudent = {};
+        attendance.forEach(item => {
+            byStudent[item.studentId] = byStudent[item.studentId] || { total: 0, present: 0 };
+            byStudent[item.studentId].total++;
+            if (item.status === "PRESENT") {
+                byStudent[item.studentId].present++;
+            }
+        });
+
+        const ranked = students
+            .map(student => {
+                const summary = byStudent[student.id] || { total: 0, present: 0 };
+                const percent = summary.total === 0 ? 0 : (summary.present * 100) / summary.total;
+                return { ...student, percent };
+            })
+            .sort((a, b) => b.percent - a.percent)
+            .slice(0, 4);
+
+        document.getElementById("spotlightGrid").innerHTML = ranked.map((student, index) => `
+            <div class="spotlight">
+                <div class="avatar">${initial(student.name)}</div>
+                <div>
+                    <strong>${student.percent.toFixed(1)}%</strong>
+                    <span>${student.name || "Student"}</span><br>
+                    <span>${index < 2 ? "Best Attendance" : "Improved"}</span>
+                </div>
+            </div>
+        `).join("") || "<p>No students available</p>";
+    }
+
+    function renderStudentChart(students) {
+        const courseCounts = {};
+        students.forEach(student => {
+            const course = courseMap[student.courseId] || "Not Assigned";
+            courseCounts[course] = (courseCounts[course] || 0) + 1;
+        });
+
+        studentChart = new Chart(document.getElementById("studentChart"), {
+            type: "doughnut",
+            data: {
+                labels: Object.keys(courseCounts),
+                datasets: [{
+                    data: Object.values(courseCounts),
+                    backgroundColor: ["#2563eb", "#20c7e8", "#d946ef", "#facc15", "#22c55e"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "58%",
+                plugins: { legend: { position: "right" } }
+            }
+        });
+    }
+
+    function renderAttendanceChart(attendance, courses) {
+        const labels = courses.map(course => course.courseName);
+        const presentCounts = courses.map(course =>
+            attendance.filter(item => item.courseId === course.id && item.status === "PRESENT").length
+        );
+        const absentCounts = courses.map(course =>
+            attendance.filter(item => item.courseId === course.id && item.status === "ABSENT").length
+        );
+
+        attendanceChart = new Chart(document.getElementById("attendanceChart"), {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Present",
+                        data: presentCounts,
+                        backgroundColor: "#4f46e5",
+                        borderRadius: 6
+                    },
+                    {
+                        label: "Absent",
+                        data: absentCounts,
+                        backgroundColor: "#38bdf8",
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function initial(name) {
+        return name ? name.charAt(0).toUpperCase() : "S";
+    }
+
+    function loadAdminName() {
+        if (!email) {
+            document.getElementById("adminName").innerText = "Admin";
+            return;
+        }
+
+        fetch(`${API_BASE}/users/email/${encodeURIComponent(email)}`)
+            .then(response => response.json())
+            .then(user => {
+                document.getElementById("adminName").innerText = user.name || "Admin";
+            })
+            .catch(() => {
+                document.getElementById("adminName").innerText = "Admin";
+            });
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+</script>
+</body>
+</html>

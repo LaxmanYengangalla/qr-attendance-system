@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Reports</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f6f9ff;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --line: #dbe7fb;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+            --pink: #ec4899;
+            --amber: #f59e0b;
+            --green: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,.16), transparent 30%),
+                radial-gradient(circle at top right, rgba(6,182,212,.18), transparent 32%),
+                radial-gradient(circle at bottom left, rgba(236,72,153,.10), transparent 28%),
+                linear-gradient(180deg, #fbfdff, var(--bg));
+        }
+
+        .sidebar {
+            width: 230px;
+            height: 100vh;
+            background: linear-gradient(180deg, #21004f, #1e40af);
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding-top: 20px;
+            color: white;
+        }
+
+        .sidebar h2 { text-align: center; margin-bottom: 30px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { padding: 15px 22px; cursor: pointer; }
+        .sidebar li:hover { background: rgba(255,255,255,.12); }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 28px;
+        }
+
+        .topbar, .toolbar, .subject-card, .panel, table {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 14px 35px rgba(31,41,55,.10);
+        }
+
+        .topbar {
+            padding: 22px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            align-items: center;
+        }
+
+        .topbar h1 { margin: 0 0 6px; }
+        .topbar p { margin: 0; color: var(--muted); }
+
+        .summary-pill {
+            min-width: 170px;
+            padding: 14px 16px;
+            border-radius: 8px;
+            color: white;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .summary-pill span {
+            display: block;
+            font-size: 28px;
+        }
+
+        .toolbar {
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .export-btn { background: var(--green); }
+        .clear-btn { background: #0f172a; }
+
+        .subject-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .subject-card {
+            padding: 16px;
+            cursor: pointer;
+            min-height: 118px;
+            transition: transform .2s, border-color .2s;
+        }
+
+        .subject-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .subject-card.active {
+            border-color: var(--primary);
+            box-shadow: 0 18px 40px rgba(37,99,235,.18);
+        }
+
+        .subject-card h3 {
+            margin: 0 0 10px;
+        }
+
+        .subject-card strong {
+            display: block;
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .subject-card span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1.15fr .85fr;
+            gap: 20px;
+        }
+
+        .panel {
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .panel h3 {
+            margin: 0 0 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+        }
+
+        th {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: white;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(148,163,184,.35);
+            text-align: left;
+        }
+
+        .status-present {
+            color: var(--green);
+            font-weight: 800;
+        }
+
+        .status-absent {
+            color: var(--danger);
+            font-weight: 800;
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 300px;
+        }
+
+        @media (max-width: 980px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
+            .topbar, .layout { grid-template-columns: 1fr; display: grid; }
+        }
+
+        @media print {
+            .sidebar, .toolbar, .subject-grid, .summary-pill { display: none; }
+            .main-content { margin-left: 0; }
+            .layout { display: block; }
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h2>Admin Panel</h2>
+    <ul>
+        <li onclick="location.href='admin-dashboard.html'">Dashboard</li>
+        <li onclick="location.href='admin-students.html'">Students</li>
+        <li onclick="location.href='admin-teachers.html'">Lecturer/Professors</li>
+        <li onclick="location.href='admin-courses.html'">Subjects</li>
+        <li onclick="location.href='report.html'">Attendance</li>
+        <li onclick="logout()">Logout</li>
+    </ul>
+</div>
+
+<main class="main-content">
+    <div class="topbar">
+        <div>
+            <h1>Attendance Reports</h1>
+            <p>Click a subject card to display attendance for that subject.</p>
+        </div>
+        <div class="summary-pill">
+            <span id="visibleCount">0</span>
+            Records
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button onclick="loadAttendance()">Refresh Report</button>
+        <button class="clear-btn" onclick="clearSubjectFilter()">Show All Subjects</button>
+        <button class="export-btn" onclick="downloadCSV()">Download CSV</button>
+        <button class="export-btn" onclick="downloadPDF()">Save PDF</button>
+    </div>
+
+    <section id="subjectGrid" class="subject-grid"></section>
+
+    <section class="layout">
+        <div class="panel">
+            <h3 id="tableTitle">All Subject Attendance</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceBody"></tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3>Subject-wise Attendance</h3>
+            <div class="chart-wrap">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    const API_BASE = window.location.origin;
+    let attendanceData = [];
+    let filteredData = [];
+    let selectedSubject = "ALL";
+    let chart;
+
+    if (localStorage.getItem("role") !== "ADMIN") {
+        alert("Access Denied");
+        window.location.href = "login.html";
+    }
+
+    function loadAttendance() {
+        Promise.all([
+            fetch(`${API_BASE}/attendance/all`).then(response => response.json()),
+            fetch(`${API_BASE}/students`).then(response => response.json()),
+            fetch(`${API_BASE}/courses`).then(response => response.json())
+        ])
+            .then(([attendance, students, courses]) => {
+                const studentMap = {};
+                const courseMap = {};
+
+                students.forEach(student => {
+                    studentMap[student.id] = student;
+                });
+
+                courses.forEach(course => {
+                    courseMap[course.id] = course.courseName;
+                });
+
+                attendanceData = attendance.map(att => {
+                    const student = studentMap[att.studentId] || {};
+                    return {
+                        rollNo: student.rollNo || att.studentId,
+                        studentName: student.name || "Unknown Student",
+                        subject: courseMap[att.courseId] || "Unknown Subject",
+                        status: att.status,
+                        time: formatDate(att.attendanceTime)
+                    };
+                });
+
+                renderSubjectCards();
+                applySubjectFilter(selectedSubject);
+            })
+            .catch(() => alert("Error loading attendance report"));
+    }
+
+    function renderSubjectCards() {
+        const subjectCounts = getSubjectCounts(attendanceData);
+        const cards = Object.entries(subjectCounts).map(([subject, count]) => `
+            <article class="subject-card ${selectedSubject === subject ? "active" : ""}" onclick="applySubjectFilter('${escapeForClick(subject)}')">
+                <h3>${subject}</h3>
+                <strong>${count.total}</strong>
+                <span>${count.present} present / ${count.absent} absent</span>
+            </article>
+        `).join("");
+
+        document.getElementById("subjectGrid").innerHTML =
+            cards || "<p>No attendance data available</p>";
+    }
+
+    function applySubjectFilter(subject) {
+        selectedSubject = subject;
+        filteredData = subject === "ALL"
+            ? [...attendanceData]
+            : attendanceData.filter(row => row.subject === subject);
+
+        document.getElementById("tableTitle").innerText =
+            subject === "ALL" ? "All Subject Attendance" : `${subject} Attendance`;
+        document.getElementById("visibleCount").innerText = filteredData.length;
+
+        renderSubjectCards();
+        renderTable(filteredData);
+        renderChart(filteredData);
+    }
+
+    function clearSubjectFilter() {
+        applySubjectFilter("ALL");
+    }
+
+    function renderTable(data) {
+        const rows = data.map(row => `
+            <tr>
+                <td>${row.rollNo}</td>
+                <td>${row.studentName}</td>
+                <td>${row.subject}</td>
+                <td class="${row.status === "PRESENT" ? "status-present" : "status-absent"}">${row.status}</td>
+                <td>${row.time}</td>
+            </tr>
+        `).join("");
+
+        document.getElementById("attendanceBody").innerHTML =
+            rows || "<tr><td colspan='5'>No attendance records found</td></tr>";
+    }
+
+    function renderChart(data) {
+        const subjectCounts = getSubjectCounts(data);
+
+        if (chart) {
+            chart.destroy();
+        }
+
+        chart = new Chart(document.getElementById("attendanceChart"), {
+            type: "doughnut",
+            data: {
+                labels: Object.keys(subjectCounts),
+                datasets: [{
+                    data: Object.values(subjectCounts).map(item => item.total),
+                    backgroundColor: ["#2563eb", "#06b6d4", "#ec4899", "#f59e0b", "#22c55e"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "58%",
+                plugins: { legend: { position: "bottom" } }
+            }
+        });
+    }
+
+    function getSubjectCounts(data) {
+        const subjectCounts = {};
+        data.forEach(row => {
+            subjectCounts[row.subject] = subjectCounts[row.subject] || { total: 0, present: 0, absent: 0 };
+            subjectCounts[row.subject].total++;
+            if (row.status === "PRESENT") {
+                subjectCounts[row.subject].present++;
+            } else {
+                subjectCounts[row.subject].absent++;
+            }
+        });
+        return subjectCounts;
+    }
+
+    function downloadCSV() {
+        if (filteredData.length === 0) {
+            alert("No records to export");
+            return;
+        }
+
+        const headers = ["Roll No", "Student Name", "Subject", "Status", "Time"];
+        const rows = filteredData.map(row => [
+            row.rollNo,
+            row.studentName,
+            row.subject,
+            row.status,
+            row.time
+        ]);
+
+        const csv = [headers, ...rows]
+            .map(row => row.map(value => `"${String(value || "").replaceAll('"', '""')}"`).join(","))
+            .join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = selectedSubject === "ALL" ? "attendance-report.csv" : `${selectedSubject}-attendance.csv`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    }
+
+    function downloadPDF() {
+        if (filteredData.length === 0) {
+            alert("No records to save");
+            return;
+        }
+        window.print();
+    }
+
+    function escapeForClick(value) {
+        return String(value).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+    }
+
+    function formatDate(value) {
+        return value ? new Date(value).toLocaleString() : "";
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    loadAttendance();
+</script>
+</body>
+</html>

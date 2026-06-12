@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --panel: rgba(255,255,255,.93);
+            --text: #172033;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+        }
+
+        body.dark {
+            --panel: rgba(15,23,42,.92);
+            --text: #f8fafc;
+            --muted: #cbd5e1;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(135deg, rgba(37,99,235,.75), rgba(6,182,212,.55)),
+                url("https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80") center/cover fixed;
+        }
+
+        .container {
+            width: min(430px, 90vw);
+            background: var(--panel);
+            padding: 34px;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(15,23,42,.28);
+            backdrop-filter: blur(14px);
+        }
+
+        .icon {
+            width: 68px;
+            height: 68px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            margin-bottom: 18px;
+        }
+
+        h2 {
+            margin: 0 0 8px;
+        }
+
+        p {
+            color: var(--muted);
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 1px solid #d9e2f3;
+            border-radius: 12px;
+            padding: 0 14px;
+            margin: 14px 0;
+        }
+
+        body.dark .input-group {
+            background: #111827;
+            border-color: #334155;
+        }
+
+        .input-group i {
+            color: var(--primary);
+        }
+
+        input {
+            width: 100%;
+            border: none;
+            padding: 15px 0;
+            outline: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            border-radius: 12px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .register-btn {
+            background: white;
+            color: var(--primary);
+            border: 1px solid #d9e2f3;
+        }
+
+        body.dark .register-btn {
+            background: #111827;
+            border-color: #334155;
+        }
+
+        .small-btn {
+            background: #0f172a;
+        }
+
+        #message {
+            margin-top: 15px;
+            color: #ef4444;
+            font-weight: bold;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="icon"><i class="fa-solid fa-user-graduate"></i></div>
+    <h2>Student Sign In</h2>
+    <p>Sign in to view attendance summary or continue after scanning a QR code.</p>
+
+    <div class="input-group">
+        <i class="fa-solid fa-envelope"></i>
+        <input type="email" id="email" placeholder="Enter Email">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-key"></i>
+        <input type="password" id="password" placeholder="Enter Password">
+    </div>
+
+    <button onclick="studentLogin()"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+    <button class="register-btn" onclick="openRegister()"><i class="fa-solid fa-user-plus"></i> Register / Sign Up</button>
+    <button class="small-btn" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i> Toggle Theme</button>
+    <div id="message"></div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+
+    if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+    }
+
+    function studentLogin() {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = params.get("returnTo");
+        const message = document.getElementById("message");
+
+        message.style.color = "#ef4444";
+
+        if (!email || !password) {
+            message.innerText = "Please enter email and password";
+            return;
+        }
+
+        message.style.color = "#2563eb";
+        message.innerText = "Signing in...";
+
+        fetch(`${API_BASE}/users/student/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email, password: password })
+        })
+        .then(async response => {
+            const text = await response.text();
+            if (!response.ok) {
+                throw new Error("Server rejected the login request");
+            }
+            return text ? JSON.parse(text) : null;
+        })
+        .then(student => {
+            if (student == null || student.id == null) {
+                message.style.color = "#ef4444";
+                message.innerText = "Invalid student credentials";
+                return;
+            }
+
+            localStorage.setItem("studentId", student.id);
+            localStorage.setItem("studentName", student.name);
+            localStorage.setItem("studentEmail", student.email);
+
+            message.style.color = "#16a34a";
+            message.innerText = "Sign in successful";
+
+            setTimeout(() => {
+                if (returnTo) {
+                    window.location.href = safeReturnUrl(returnTo);
+                    return;
+                }
+                const query = params.toString();
+                window.location.href = query
+                    ? `student-dashboard.html?${query}`
+                    : "student-dashboard.html";
+            }, 700);
+        })
+        .catch(error => {
+            message.style.color = "#ef4444";
+            message.innerText = "Could not sign in. Please refresh and try again.";
+        });
+    }
+
+    function safeReturnUrl(returnTo) {
+        try {
+            const target = new URL(returnTo, window.location.origin);
+            if (target.origin !== window.location.origin) {
+                return "student-dashboard.html";
+            }
+            return target.href;
+        } catch (error) {
+            return "student-dashboard.html";
+        }
+    }
+
+    function openRegister() {
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = params.get("returnTo");
+        window.location.href = returnTo
+            ? `student-register.html?returnTo=${encodeURIComponent(returnTo)}`
+            : "student-register.html";
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    }
+</script>
+</body>
+</html>

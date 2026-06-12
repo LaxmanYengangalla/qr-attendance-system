@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Subjects</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f6f9ff;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --line: #dbe7fb;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+            --danger: #dc2626;
+            --green: #16a34a;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,.15), transparent 30%),
+                radial-gradient(circle at top right, rgba(6,182,212,.15), transparent 32%),
+                linear-gradient(180deg, #f8fbff, var(--bg));
+        }
+
+        .sidebar {
+            width: 230px;
+            height: 100vh;
+            background: linear-gradient(180deg, #10233f, #1e40af);
+            position: fixed;
+            left: 0;
+            top: 0;
+            color: white;
+            padding-top: 20px;
+        }
+
+        .sidebar h2 { text-align: center; margin-bottom: 24px; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { padding: 15px 22px; cursor: pointer; }
+        .sidebar li:hover { background: rgba(255,255,255,.12); }
+        .sidebar i { width: 24px; }
+
+        .main-content {
+            margin-left: 250px;
+            padding: 28px;
+            
+        }
+
+        .topbar, .form-box, .group-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 14px 35px rgba(31,41,55,.10);
+        }
+
+        .topbar {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .topbar h1 { margin: 0 0 6px; }
+        .topbar p { margin: 0; color: var(--muted); }
+
+        .form-box {
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+            margin: 0 0 6px 2px;
+        }
+
+        input {
+            width: 100%;
+            min-height: 44px;
+            padding: 12px;
+            border: 1px solid #cfd7ea;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            color: var(--text);
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+        }
+
+        .subject-row {
+            display: grid;
+            grid-template-columns: 1fr 44px;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            min-height: 42px;
+            padding: 0 16px;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            font-weight: 700;
+        }
+
+        button.secondary {
+            background: #0f172a;
+        }
+
+        button.delete-btn, button.remove-btn {
+            background: var(--danger);
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .message {
+            min-height: 22px;
+            margin-top: 12px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .groups {
+            display: grid;
+            gap: 18px;
+        }
+
+        .group-card {
+            overflow: hidden;
+        }
+
+        .group-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 18px;
+            background: linear-gradient(90deg, rgba(37,99,235,.12), rgba(6,182,212,.12));
+        }
+
+        .group-head h3 {
+            margin: 0;
+        }
+
+        .count-pill {
+            padding: 7px 10px;
+            border-radius: 999px;
+            color: white;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: white;
+        }
+
+        th, td {
+            padding: 13px;
+            border-bottom: 1px solid rgba(148,163,184,.35);
+            text-align: left;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="sidebar">
+    <h2><i class="fa-solid fa-qrcode"></i> Admin</h2>
+    <ul>
+        <li onclick="location.href='admin-dashboard.html'"><i class="fa-solid fa-chart-line"></i> Dashboard</li>
+        <li onclick="location.href='admin-students.html'"><i class="fa-solid fa-user-graduate"></i> Students</li>
+        <li onclick="location.href='admin-teachers.html'"><i class="fa-solid fa-chalkboard-user"></i> Lecturer/Professors</li>
+        <li onclick="location.href='admin-courses.html'"><i class="fa-solid fa-book-open"></i> Subjects</li>
+        <li onclick="location.href='report.html'"><i class="fa-solid fa-file-export"></i> Attendance</li>
+        <li onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</li>
+    </ul>
+</div>
+
+<main class="main-content">
+    <div class="topbar">
+        <h1>Subject & Group Management</h1>
+        <p>Create new groups manually, add many subjects at once, and assign a lecturer or professor.</p>
+    </div>
+
+    <div class="form-box">
+        <h3><i class="fa-solid fa-plus"></i> Add Group Subjects</h3>
+
+        <div class="form-grid">
+            <div>
+                <label for="groupName">Group Name</label>
+                <input type="text" id="groupName" list="groupOptions" placeholder="Type or select group name">
+                <datalist id="groupOptions"></datalist>
+            </div>
+            <div>
+                <label for="lecturerName">Lecturer / Professor Name</label>
+                <input type="text" id="lecturerName" placeholder="Dr. Ramesh">
+            </div>
+        </div>
+
+        <label>Subjects</label>
+        <div id="subjectRows"></div>
+
+        <div class="button-row">
+            <button class="secondary" onclick="addSubjectRow()"><i class="fa-solid fa-plus"></i> Add More Subject</button>
+            <button id="saveBtn" onclick="saveSubjects()"><i class="fa-solid fa-floppy-disk"></i> Save Subjects</button>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <section id="groupedSubjects" class="groups"></section>
+</main>
+
+<script>
+    const API_BASE = window.location.origin;
+    let allSubjects = [];
+
+    if (localStorage.getItem("role") !== "ADMIN") {
+        alert("Access Denied");
+        window.location.href = "login.html";
+    }
+
+    function loadSubjects() {
+        fetch(`${API_BASE}/courses`)
+            .then(response => response.json())
+            .then(data => {
+                allSubjects = data;
+                renderGroupOptions(data);
+                renderGroupedSubjects(data);
+            })
+            .catch(() => showMessage("Error loading subjects", true));
+    }
+
+    function renderGroupOptions(subjects) {
+        const groupOptions = document.getElementById("groupOptions");
+        const groups = [...new Set(subjects.map(subject => subject.groupName).filter(Boolean))].sort();
+        groupOptions.innerHTML = groups.map(group => `<option value="${escapeHtml(group)}"></option>`).join("");
+    }
+
+    function renderGroupedSubjects(subjects) {
+        const grouped = {};
+
+        subjects.forEach(subject => {
+            const group = subject.groupName || "Not Assigned";
+            grouped[group] = grouped[group] || [];
+            grouped[group].push(subject);
+        });
+
+        const output = Object.entries(grouped)
+            .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
+            .map(([group, groupSubjects]) => `
+                <article class="group-card">
+                    <div class="group-head">
+                        <h3>${escapeHtml(group)}</h3>
+                        <span class="count-pill">${groupSubjects.length} Subjects</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Subject</th>
+                                <th>Lecturer / Professor</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${groupSubjects.map((subject, index) => `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${escapeHtml(subject.courseName)}</td>
+                                    <td>${escapeHtml(subject.lecturerName || "Not Assigned")}</td>
+                                    <td>
+                                        <button class="delete-btn" onclick="deleteSubject(${subject.id})">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </article>
+            `).join("");
+
+        document.getElementById("groupedSubjects").innerHTML =
+            output || "<p>No subjects found</p>";
+    }
+
+    function addSubjectRow(value = "") {
+        const row = document.createElement("div");
+        row.className = "subject-row";
+        row.innerHTML = `
+            <input type="text" class="subject-input" placeholder="Subject name" value="${escapeHtml(value)}">
+            <button class="remove-btn" onclick="removeSubjectRow(this)" title="Remove subject">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        `;
+        document.getElementById("subjectRows").appendChild(row);
+    }
+
+    function removeSubjectRow(button) {
+        const rows = document.querySelectorAll(".subject-row");
+        if (rows.length === 1) {
+            rows[0].querySelector("input").value = "";
+            return;
+        }
+        button.closest(".subject-row").remove();
+    }
+
+    function saveSubjects() {
+        const groupName = document.getElementById("groupName").value.trim();
+        const lecturerName = document.getElementById("lecturerName").value.trim();
+        const subjects = [...document.querySelectorAll(".subject-input")]
+            .map(input => input.value.trim())
+            .filter(Boolean);
+        const saveBtn = document.getElementById("saveBtn");
+
+        if (!groupName) {
+            showMessage("Group name is required.", true);
+            return;
+        }
+
+        if (!lecturerName) {
+            showMessage("Lecturer / Professor name is required.", true);
+            return;
+        }
+
+        if (subjects.length === 0) {
+            showMessage("Enter at least one subject.", true);
+            return;
+        }
+
+        saveBtn.disabled = true;
+        showMessage("Saving subjects...");
+
+        fetch(`${API_BASE}/courses/batch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ groupName, lecturerName, subjects })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Unable to save subjects");
+                }
+                return response.json();
+            })
+            .then(savedSubjects => {
+                showMessage(`${savedSubjects.length} subject(s) saved successfully.`);
+                resetForm();
+                loadSubjects();
+            })
+            .catch(() => showMessage("Error saving subjects. Please check all fields.", true))
+            .finally(() => {
+                saveBtn.disabled = false;
+            });
+    }
+
+    function resetForm() {
+        document.getElementById("groupName").value = "";
+        document.getElementById("lecturerName").value = "";
+        document.getElementById("subjectRows").innerHTML = "";
+        addSubjectRow();
+    }
+
+    function deleteSubject(id) {
+        if (!confirm("Delete this subject?")) {
+            return;
+        }
+
+        fetch(`${API_BASE}/courses/${id}`, { method: "DELETE" })
+            .then(response => response.text())
+            .then(message => {
+                showMessage(message);
+                loadSubjects();
+            })
+            .catch(() => showMessage("Error deleting subject", true));
+    }
+
+    function showMessage(text, isError) {
+        const message = document.getElementById("message");
+        message.innerText = text;
+        message.style.color = isError ? "var(--danger)" : "var(--muted)";
+    }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function logout() {
+        localStorage.clear();
+        window.location.href = "login.html";
+    }
+
+    addSubjectRow();
+    loadSubjects();
+</script>
+</body>
+</html>

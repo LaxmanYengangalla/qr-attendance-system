@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Scanner</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        :root {
+            --panel: rgba(255,255,255,.93);
+            --text: #172033;
+            --muted: #64748b;
+            --primary: #7c3aed;
+            --accent: #06b6d4;
+        }
+
+        body.dark {
+            --panel: rgba(15,23,42,.92);
+            --text: #f8fafc;
+            --muted: #cbd5e1;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            text-align: center;
+            background:
+                linear-gradient(135deg, rgba(124,58,237,.76), rgba(6,182,212,.5)),
+                url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80") center/cover fixed;
+        }
+
+        .container {
+            width: min(700px, 92vw);
+            margin: 35px auto;
+            background: var(--panel);
+            padding: 28px;
+            border-radius: 18px;
+            box-shadow: 0 25px 70px rgba(15,23,42,.28);
+            backdrop-filter: blur(14px);
+        }
+
+        .scanner-icon {
+            width: 74px;
+            height: 74px;
+            border-radius: 22px;
+            display: grid;
+            place-items: center;
+            margin: auto;
+            color: white;
+            font-size: 34px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+        }
+
+        #reader {
+            width: 100%;
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 16px;
+            background: white;
+        }
+
+        #cameraPreview {
+            width: 100%;
+            max-height: 430px;
+            display: none;
+            border-radius: 16px;
+            background: #0f172a;
+            object-fit: cover;
+        }
+
+        .hint {
+            margin: 14px auto 0;
+            max-width: 560px;
+            line-height: 1.55;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .message.error {
+            color: #dc2626;
+        }
+
+        .message.success {
+            color: #16a34a;
+        }
+
+        button {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 7px;
+            font-weight: bold;
+        }
+
+        .dark-btn {
+            background: #0f172a;
+        }
+
+        .message {
+            margin-top: 16px;
+            font-weight: bold;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="scanner-icon"><i class="fa-solid fa-qrcode"></i></div>
+    <h2>Scan Attendance QR</h2>
+    <p>Allow camera access, scan the lecturer/professor QR, and attendance will be marked automatically.</p>
+    <div class="hint" id="secureHint"></div>
+
+    <button onclick="location.href='student-dashboard.html'"><i class="fa-solid fa-chart-simple"></i> Dashboard</button>
+    <button onclick="startScanner()"><i class="fa-solid fa-camera"></i> Start Camera</button>
+    <button onclick="stopScanner()"><i class="fa-solid fa-stop"></i> Stop Camera</button>
+    <button class="dark-btn" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i> Theme</button>
+
+    <div id="reader">
+        <video id="cameraPreview" autoplay muted playsinline></video>
+        <canvas id="scanCanvas" style="display:none;"></canvas>
+    </div>
+    <div id="message" class="message"></div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+    let studentId = null;
+    const video = document.getElementById("cameraPreview");
+    const canvas = document.getElementById("scanCanvas");
+    const messageBox = document.getElementById("message");
+    const secureHint = document.getElementById("secureHint");
+    let cameraStream;
+    let scanTimer;
+    let barcodeDetector;
+    let scannerMode = null;
+    let isScanning = false;
+    let attendanceMarked = false;
+
+    if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+    }
+
+    fetch(`${API_BASE}/users/student/session`)
+        .then(response => response.json())
+        .then(student => {
+            if (!student || !student.id) {
+                window.location.href = "student.html?returnTo=qr-scanner.html";
+                return;
+            }
+
+            studentId = student.id;
+            localStorage.setItem("studentId", student.id);
+            localStorage.setItem("studentName", student.name || "");
+            localStorage.setItem("studentEmail", student.email || "");
+        })
+        .catch(() => {
+            window.location.href = "student.html?returnTo=qr-scanner.html";
+        });
+
+    showSecureContextHint();
+    window.setTimeout(startScanner, 600);
+
+    async function startScanner() {
+        if (isScanning) {
+            return;
+        }
+
+        if (!window.isSecureContext) {
+            showMessage(
+                "Camera scanning requires HTTPS. Open this system using HTTPS or ngrok. Direct attendance links still work without camera access.",
+                "error"
+            );
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showMessage("This browser does not support camera access. Please use Chrome on Android or a modern desktop browser.", "error");
+            return;
+        }
+
+        try {
+            showMessage("Requesting camera permission...");
+
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+
+            video.srcObject = cameraStream;
+            video.style.display = "block";
+            await video.play();
+
+            scannerMode = getScannerMode();
+            if (!scannerMode) {
+                showMessage("QR scanning library could not load. Please check internet access and reload the page.", "error");
+                stopScanner();
+                return;
+            }
+
+            if (scannerMode === "barcode-detector") {
+                barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+            }
+
+            isScanning = true;
+            attendanceMarked = false;
+            showMessage("Camera started. Point it at the QR code.", "success");
+            scanTimer = window.setInterval(scanFrame, 250);
+        } catch (error) {
+            showCameraError(error);
+        }
+    }
+
+    function stopScanner() {
+        window.clearInterval(scanTimer);
+        scanTimer = null;
+        isScanning = false;
+
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+
+        scannerMode = null;
+        barcodeDetector = null;
+        video.pause();
+        video.removeAttribute("srcObject");
+        video.srcObject = null;
+        video.style.display = "none";
+        showMessage("Camera stopped.");
+    }
+
+    async function scanFrame() {
+        if (!isScanning || attendanceMarked || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+            return;
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext("2d");
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        try {
+            const qrText = await readQrText(context);
+            if (qrText) {
+                attendanceMarked = true;
+                handleQRCode(qrText);
+            }
+        } catch (error) {
+            showMessage("Scanner error. Please stop and start the camera again.", "error");
+            stopScanner();
+        }
+    }
+
+    function getScannerMode() {
+        if ("BarcodeDetector" in window) {
+            return "barcode-detector";
+        }
+
+        if (typeof jsQR === "function") {
+            return "jsqr";
+        }
+
+        return null;
+    }
+
+    async function readQrText(context) {
+        if (scannerMode === "barcode-detector" && barcodeDetector) {
+            const codes = await barcodeDetector.detect(canvas);
+            if (codes.length > 0 && codes[0].rawValue) {
+                return codes[0].rawValue;
+            }
+        }
+
+        if (typeof jsQR !== "function") {
+            return null;
+        }
+
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth"
+        });
+        return code ? code.data : null;
+    }
+
+    function handleQRCode(qrText) {
+        const qrSessionId = getQrSessionId(qrText);
+        if (!qrSessionId) {
+            attendanceMarked = false;
+            showMessage("Invalid QR code. Please scan the attendance QR generated by the lecturer/professor.", "error");
+            return;
+        }
+
+        stopScanner();
+        showMessage("QR detected. Marking attendance...");
+        fetch(`${API_BASE}/api/student/attendance/mark`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                sessionId: Number(qrSessionId)
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                messageBox.className = data.success ? "message success" : "message error";
+                messageBox.innerText = data.message || "Attendance response received.";
+                attendanceMarked = data.success;
+            })
+            .catch(error => {
+                attendanceMarked = false;
+                showMessage("Error marking attendance. Please check the network and scan again.", "error");
+            });
+    }
+
+    function getQrSessionId(qrText) {
+        try {
+            const url = new URL(qrText, window.location.origin);
+            const parts = url.pathname.split("/").filter(Boolean);
+            return url.searchParams.get("sessionId")
+                || url.searchParams.get("qrSessionId")
+                || parts[parts.length - 1];
+        } catch (error) {
+            return new URLSearchParams(qrText).get("sessionId")
+                || new URLSearchParams(qrText).get("qrSessionId");
+        }
+    }
+
+    function showSecureContextHint() {
+        if (window.isSecureContext) {
+            secureHint.innerText = "Camera access is available on this page.";
+            return;
+        }
+
+        secureHint.innerText =
+            "Camera access needs HTTPS or localhost. Desktop localhost works, but mobile must open an HTTPS address, not http://computer-ip:8085.";
+    }
+
+    function showCameraError(error) {
+        const name = error && error.name ? error.name : "";
+
+        if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+            showMessage("Camera permission was denied. Open browser site settings and allow Camera for this site.", "error");
+            return;
+        }
+
+        if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+            showMessage("No camera was found on this device.", "error");
+            return;
+        }
+
+        if (name === "NotReadableError" || name === "TrackStartError") {
+            showMessage("Camera is already being used by another app. Close other camera apps and try again.", "error");
+            return;
+        }
+
+        if (name === "OverconstrainedError") {
+            showMessage("Back camera was not available. Try again or use another browser.", "error");
+            return;
+        }
+
+        showMessage("Could not start the camera. Please check browser permission and use HTTPS on mobile.", "error");
+    }
+
+    function showMessage(text, type) {
+        messageBox.className = type ? `message ${type}` : "message";
+        messageBox.innerText = text;
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    }
+
+    window.addEventListener("beforeunload", stopScanner);
+</script>
+</body>
+</html>

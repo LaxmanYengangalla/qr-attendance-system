@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Registration</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --panel: rgba(255,255,255,.94);
+            --text: #172033;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+            --line: #d9e2f3;
+        }
+
+        body.dark {
+            --panel: rgba(15,23,42,.92);
+            --text: #f8fafc;
+            --muted: #cbd5e1;
+            --line: #334155;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(135deg, rgba(37,99,235,.75), rgba(6,182,212,.55)),
+                url("https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80") center/cover fixed;
+        }
+
+        .container {
+            width: min(520px, 92vw);
+            background: var(--panel);
+            padding: 34px;
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(15,23,42,.28);
+            backdrop-filter: blur(14px);
+        }
+
+        .icon {
+            width: 68px;
+            height: 68px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            margin-bottom: 18px;
+        }
+
+        h2 { margin: 0 0 8px; }
+        p { color: var(--muted); margin-top: 0; }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0 14px;
+            margin: 12px 0;
+        }
+
+        body.dark .input-group {
+            background: #111827;
+        }
+
+        .input-group i {
+            color: var(--primary);
+            width: 18px;
+            text-align: center;
+        }
+
+        input, select {
+            width: 100%;
+            border: none;
+            padding: 15px 0;
+            outline: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        select option {
+            color: #172033;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            border-radius: 12px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+        }
+
+        .secondary {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--line);
+        }
+
+        body.dark .secondary {
+            background: #111827;
+        }
+
+        #message {
+            margin-top: 15px;
+            color: #ef4444;
+            font-weight: bold;
+            min-height: 24px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="icon"><i class="fa-solid fa-user-plus"></i></div>
+    <h2>Student Registration</h2>
+    <p>Create your student account and select your group/class.</p>
+
+    <div class="input-group">
+        <i class="fa-solid fa-user"></i>
+        <input type="text" id="name" placeholder="Full Name">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-id-card"></i>
+        <input type="text" id="rollNo" placeholder="Roll Number">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-envelope"></i>
+        <input type="email" id="email" placeholder="Email">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-key"></i>
+        <input type="password" id="password" placeholder="Password">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-lock"></i>
+        <input type="password" id="confirmPassword" placeholder="Confirm Password">
+    </div>
+    <div class="input-group">
+        <i class="fa-solid fa-users"></i>
+        <select id="groupName">
+            <option value="">Select Group / Class</option>
+            <option value="MSC Computer Science">MSC Computer Science</option>
+            <option value="MSC Statistics">MSC Statistics</option>
+            <option value="MSC Mathematics">MSC Mathematics</option>
+            <option value="MSC Physics">MSC Physics</option>
+            <option value="MSC Chemistry">MSC Chemistry</option>
+            <option value="MSC Botany">MSC Botany</option>
+            <option value="MSC Zoology">MSC Zoology</option>
+            <option value="MSC Biotechnology">MSC Biotechnology</option>
+            <option value="MSC Microbiology">MSC Microbiology</option>
+            <option value="MSC Data Science">MSC Data Science</option>
+            <option value="MCA">MCA</option>
+            <option value="MBA">MBA</option>
+            <option value="MCOM">MCOM</option>
+            <option value="MA English">MA English</option>
+            <option value="MA Economics">MA Economics</option>
+            <option value="MA Political Science">MA Political Science</option>
+        </select>
+    </div>
+
+    <button onclick="registerStudent()"><i class="fa-solid fa-user-plus"></i> Register</button>
+    <button class="secondary" onclick="goToSignIn()"><i class="fa-solid fa-right-to-bracket"></i> Already registered? Sign In</button>
+    <div id="message"></div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+
+    if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+    }
+
+    function registerStudent() {
+        const name = document.getElementById("name").value.trim();
+        const rollNo = document.getElementById("rollNo").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const groupName = document.getElementById("groupName").value;
+
+        if (!name || !rollNo || !email || !password || !confirmPassword || !groupName) {
+            showMessage("Please fill all fields.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showMessage("Passwords do not match.");
+            return;
+        }
+
+        showMessage("Creating account...", "#2563eb");
+
+        fetch(`${API_BASE}/students`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name,
+                rollNo,
+                email,
+                password,
+                groupName
+            })
+        })
+            .then(async response => {
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(getErrorMessage(text));
+                }
+                return response.json();
+            })
+            .then(() => {
+                showMessage("Registration successful. Please sign in.", "#16a34a");
+                window.setTimeout(goToSignIn, 900);
+            })
+            .catch(error => showMessage(error.message || "Registration failed. Please try again."));
+    }
+
+    function getErrorMessage(text) {
+        const match = text.match(/"message"\s*:\s*"([^"]+)"/);
+        return match ? match[1] : "Registration failed. Please check your details.";
+    }
+
+    function goToSignIn() {
+        const params = new URLSearchParams(window.location.search);
+        const returnTo = params.get("returnTo");
+        window.location.href = returnTo
+            ? `student.html?returnTo=${encodeURIComponent(returnTo)}`
+            : "student.html";
+    }
+
+    function showMessage(text, color) {
+        const message = document.getElementById("message");
+        message.style.color = color || "#ef4444";
+        message.innerText = text;
+    }
+</script>
+</body>
+</html>

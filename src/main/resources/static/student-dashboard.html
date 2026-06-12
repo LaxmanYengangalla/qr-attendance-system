@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f6f9ff;
+            --panel: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --line: #dbe7fb;
+            --primary: #2563eb;
+            --accent: #06b6d4;
+            --danger: #dc2626;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(37,99,235,.14), transparent 32%),
+                radial-gradient(circle at top right, rgba(6,182,212,.14), transparent 34%),
+                linear-gradient(180deg, #f8fbff, var(--bg));
+        }
+
+        .header {
+            background: linear-gradient(90deg, #10233f, #1e40af);
+            color: white;
+            padding: 18px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container { width: 90%; margin: 25px auto; }
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 25px; }
+        .card, .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 14px 35px rgba(31,41,55,.10);
+            padding: 20px;
+        }
+        .card h2 { color: var(--primary); margin: 0; font-size: 34px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: linear-gradient(90deg, var(--primary), var(--accent)); color: white; }
+        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; }
+        .logout-btn { background: var(--danger); }
+        .chart-box { position: relative; height: 260px; margin-bottom: 16px; }
+        @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="header">
+    <div>
+        <h2 id="studentName">Student Dashboard</h2>
+        <span id="studentEmail"></span>
+    </div>
+    <div>
+        <button onclick="location.href='qr-scanner.html'">Open QR Scanner</button>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<div class="container">
+    <div id="attendanceMessage"></div>
+    <div class="cards">
+        <div class="card"><h2 id="percentage">0%</h2><p>Attendance Percentage</p></div>
+        <div class="card"><h2 id="present">0</h2><p>Present</p></div>
+        <div class="card"><h2 id="totalClasses">0</h2><p>Total Classes</p></div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h3>Course-wise Attendance</h3>
+            <div class="chart-box">
+                <canvas id="courseChart"></canvas>
+            </div>
+            <table>
+                <thead><tr><th>Course</th><th>Present</th><th>Total</th><th>%</th></tr></thead>
+                <tbody id="courseBody"></tbody>
+            </table>
+        </div>
+        <div class="panel">
+            <h3>Enrolled Courses</h3>
+            <table>
+                <thead><tr><th>S.No</th><th>Subject</th></tr></thead>
+                <tbody id="enrollmentBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top:20px;">
+        <h3>Attendance History</h3>
+        <table>
+            <thead><tr><th>S.No</th><th>Subject</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const studentId = localStorage.getItem("studentId");
+    const studentName = localStorage.getItem("studentName");
+    const studentEmail = localStorage.getItem("studentEmail");
+    const API_BASE = window.location.origin;
+    let courseChart;
+    let courseMap = {};
+
+    if (!studentId) {
+        const query = window.location.search;
+        window.location.href = query ? `student.html${query}` : "student.html";
+    }
+
+    document.getElementById("studentName").innerText =
+        studentName ? `Welcome, ${studentName}` : "Student Dashboard";
+    document.getElementById("studentEmail").innerText = studentEmail || "";
+
+    function loadSummary() {
+        fetch(`${API_BASE}/attendance/student/${studentId}/summary`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("percentage").innerText = `${Number(data.percentage).toFixed(1)}%`;
+                document.getElementById("present").innerText = data.present;
+                document.getElementById("totalClasses").innerText = data.totalClasses;
+            });
+    }
+
+    function loadCourseAttendance() {
+        fetch(`${API_BASE}/attendance/student/${studentId}/course-summary`)
+            .then(response => response.json())
+            .then(data => {
+                let rows = "";
+                data.forEach(course => {
+                    rows += `<tr><td>${course.courseName}</td><td>${course.presentCount}</td><td>${course.totalClasses}</td><td>${Number(course.percentage).toFixed(1)}%</td></tr>`;
+                });
+                document.getElementById("courseBody").innerHTML =
+                    rows || "<tr><td colspan='4'>No course attendance found</td></tr>";
+                renderCourseChart(data);
+            });
+    }
+
+    function renderCourseChart(data) {
+        if (courseChart) {
+            courseChart.destroy();
+        }
+        courseChart = new Chart(document.getElementById("courseChart"), {
+            type: "bar",
+            data: {
+                labels: data.map(course => course.courseName),
+                datasets: [{
+                    label: "Attendance %",
+                    data: data.map(course => course.percentage),
+                    backgroundColor: ["#2563eb", "#06b6d4", "#ec4899", "#f59e0b", "#22c55e"],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { min: 0, max: 100 } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function loadEnrollments() {
+        Promise.all([
+            fetch(`${API_BASE}/student-courses/student/${studentId}`).then(response => response.json()),
+            loadCourses()
+        ])
+            .then(([data]) => {
+                let rows = "";
+                data.forEach((course, index) => {
+                    rows += `<tr><td>${index + 1}</td><td>${courseMap[course.courseId] || "Unknown Subject"}</td></tr>`;
+                });
+                document.getElementById("enrollmentBody").innerHTML =
+                    rows || "<tr><td colspan='2'>No enrolled courses found</td></tr>";
+            });
+    }
+
+    function loadHistory() {
+        Promise.all([
+            fetch(`${API_BASE}/attendance/student/${studentId}/history`).then(response => response.json()),
+            loadCourses()
+        ])
+            .then(([data]) => {
+                let rows = "";
+                data.forEach((att, index) => {
+                    rows += `<tr><td>${index + 1}</td><td>${courseMap[att.courseId] || "Unknown Subject"}</td><td>${att.status}</td><td>${att.attendanceTime ? new Date(att.attendanceTime).toLocaleString() : ""}</td></tr>`;
+                });
+                document.getElementById("historyBody").innerHTML =
+                    rows || "<tr><td colspan='4'>No attendance history found</td></tr>";
+            });
+    }
+
+    function loadCourses() {
+        if (Object.keys(courseMap).length > 0) {
+            return Promise.resolve(courseMap);
+        }
+
+        return fetch(`${API_BASE}/courses`)
+            .then(response => response.json())
+            .then(courses => {
+                courses.forEach(course => {
+                    courseMap[course.id] = course.courseName;
+                });
+                return courseMap;
+            });
+    }
+
+    function markAttendanceFromQuery() {
+        const qrSessionId = new URLSearchParams(window.location.search).get("qrSessionId");
+        if (!qrSessionId || !studentId) {
+            return;
+        }
+        fetch(`${API_BASE}/attendance/mark?studentId=${studentId}&qrSessionId=${qrSessionId}&role=STUDENT`)
+            .then(response => response.text())
+            .then(message => {
+                document.getElementById("attendanceMessage").innerHTML = message;
+                loadSummary();
+                loadCourseAttendance();
+                loadHistory();
+            })
+            .catch(error => {
+                document.getElementById("attendanceMessage").innerHTML = "<p style='color:red;'>Error marking attendance</p>";
+            });
+    }
+
+    function logout() {
+        fetch(`${API_BASE}/users/student/logout`, { method: "POST" }).catch(() => {});
+        localStorage.clear();
+        window.location.href = "student.html";
+    }
+
+    loadSummary();
+    loadCourseAttendance();
+    loadEnrollments();
+    loadHistory();
+    markAttendanceFromQuery();
+</script>
+</body>
+</html>
