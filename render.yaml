@@ -1,7 +1,7 @@
 services:
   - type: web
     name: qr-attendance-system
-    runtime: java
+    env: java
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
     envVars:
@@ -11,5 +11,3 @@ services:
         sync: false
       - key: DB_PASSWORD
         sync: false
-      - key: SERVER_PORT
-        value: 10000
