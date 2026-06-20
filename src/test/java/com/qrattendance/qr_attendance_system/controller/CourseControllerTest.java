@@ -1,4 +1,6 @@
 package com.qrattendance.qr_attendance_system.controller;
+// Trigger recompile
+
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import com.qrattendance.qr_attendance_system.model.Course;
 import com.qrattendance.qr_attendance_system.repository.CourseRepository;
 import com.qrattendance.qr_attendance_system.repository.QRSessionRepository;
@@ -52,9 +55,11 @@ class CourseControllerTest {
         Course saved = course("Java", "MSC Computer Science", "Dr. Rao");
         when(courseRepository.save(any(Course.class))).thenReturn(saved);
 
-        mockMvc.perform(post("/courses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"courseName\":\"Java\",\"groupName\":\"MSC Computer Science\",\"lecturerName\":\"Dr. Rao\"}"))
+        MockHttpServletRequestBuilder requestBuilder = post("/courses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"courseName\":\"Java\",\"groupName\":\"MSC Computer Science\",\"lecturerName\":\"Dr. Rao\"}");
+
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.courseName").value("Java"));
 
@@ -63,9 +68,11 @@ class CourseControllerTest {
 
     @Test
     void addCourseRejectsEmptyGroupName() throws Exception {
-        mockMvc.perform(post("/courses")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"courseName\":\"Java\",\"groupName\":\" \",\"lecturerName\":\"Dr. Rao\"}"))
+        MockHttpServletRequestBuilder requestBuilder = post("/courses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"courseName\":\"Java\",\"groupName\":\" \",\"lecturerName\":\"Dr. Rao\"}");
+
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().is5xxServerError());
     }
 
@@ -88,9 +95,11 @@ class CourseControllerTest {
                 course("Java", "MSC Computer Science", "Dr. Rao"),
                 course("Python", "MSC Computer Science", "Dr. Rao")));
 
-        mockMvc.perform(post("/courses/batch")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[{\"courseName\":\"Java\",\"lecturerName\":\"Dr. Rao\"},{\"courseName\":\"Python\",\"lecturerName\":\"Dr. Rao\"}]}"))
+        MockHttpServletRequestBuilder requestBuilder = post("/courses/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[{\"courseName\":\"Java\",\"lecturerName\":\"Dr. Rao\"},{\"courseName\":\"Python\",\"lecturerName\":\"Dr. Rao\"}]}");
+
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
     }
@@ -101,9 +110,11 @@ class CourseControllerTest {
         request.setGroupName("MSC Computer Science");
         request.setSubjects(List.of());
 
-        mockMvc.perform(post("/courses/batch")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[]}"))
+        MockHttpServletRequestBuilder requestBuilder = post("/courses/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[]}");
+
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().is5xxServerError());
     }
 
@@ -118,9 +129,11 @@ class CourseControllerTest {
         when(courseRepository.findById(4L)).thenReturn(java.util.Optional.of(existing));
         when(courseRepository.save(any(Course.class))).thenReturn(updated);
 
-        mockMvc.perform(put("/courses/4")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"lecturerName\":\"Dr. Prasad\"}"))
+        MockHttpServletRequestBuilder requestBuilder = put("/courses/4")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"lecturerName\":\"Dr. Prasad\"}");
+
+        mockMvc.perform(requestBuilder)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.lecturerName").value("Dr. Prasad"));
     }

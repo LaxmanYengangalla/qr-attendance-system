@@ -5,9 +5,9 @@ import com.qrattendance.qr_attendance_system.model.User;
 import com.qrattendance.qr_attendance_system.service.PasswordService;
 import com.qrattendance.qr_attendance_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import com.qrattendance.qr_attendance_system.repository.AttendanceRepository;
 import com.qrattendance.qr_attendance_system.repository.StudentRepository;
 import com.qrattendance.qr_attendance_system.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
