@@ -93,6 +93,25 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar input[type="date"],
+        .toolbar input[type="month"] {
+            padding: 9px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            outline: none;
+            background: white;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .toolbar input[type="date"]:focus,
+        .toolbar input[type="month"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.14);
         }
 
         button {
@@ -233,10 +252,27 @@
     </div>
 
     <div class="toolbar">
-        <button onclick="loadAttendance()">Refresh Report</button>
-        <button class="clear-btn" onclick="clearSubjectFilter()">Show All Subjects</button>
-        <button class="export-btn" onclick="downloadCSV()">Download CSV</button>
-        <button class="export-btn" onclick="downloadPDF()">Save PDF</button>
+        <button onclick="loadAttendance()"><i class="fa-solid fa-rotate"></i> Refresh Report</button>
+        <button class="clear-btn" onclick="clearAllFilters()"><i class="fa-solid fa-filter-circle-xmark"></i> Show All Subjects</button>
+        
+        <span style="border-left: 2px solid var(--line); height: 28px; margin: 0 4px;"></span>
+
+        <select id="groupSelect" onchange="applyGroupFilter()" style="padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; outline: none; background: white; color: var(--text); font-size: 14px; font-family: inherit; font-weight: bold; cursor: pointer;">
+            <option value="ALL">All Groups</option>
+        </select>
+
+        <span style="border-left: 2px solid var(--line); height: 28px; margin: 0 4px;"></span>
+        
+        <button onclick="enableDailyFilter()"><i class="fa-solid fa-calendar-day"></i> Daily Report</button>
+        <input type="date" id="dailyPicker" style="display: none;" onchange="applyDailyFilter()">
+        
+        <button onclick="enableMonthlyFilter()"><i class="fa-solid fa-calendar-days"></i> Monthly Report</button>
+        <input type="month" id="monthlyPicker" style="display: none;" onchange="applyMonthlyFilter()">
+
+        <span style="border-left: 2px solid var(--line); height: 28px; margin: 0 4px;"></span>
+        
+        <button class="export-btn" onclick="downloadCSV()"><i class="fa-solid fa-file-csv"></i> Download CSV</button>
+        <button class="export-btn" onclick="downloadPDF()"><i class="fa-solid fa-file-pdf"></i> Save PDF</button>
     </div>
 
     <section id="subjectGrid" class="subject-grid"></section>
@@ -249,6 +285,7 @@
                     <tr>
                         <th>Roll No</th>
                         <th>Student Name</th>
+                        <th>Group</th>
                         <th>Subject</th>
                         <th>Status</th>
                         <th>Time</th>
@@ -271,7 +308,11 @@
     const API_BASE = window.location.origin;
     let attendanceData = [];
     let filteredData = [];
+    let coursesList = [];
     let selectedSubject = "ALL";
+    let selectedGroup = "ALL";
+    let selectedDate = null;
+    let selectedMonth = null;
     let chart;
 
     if (localStorage.getItem("role") !== "ADMIN") {
@@ -288,6 +329,8 @@
             .then(([attendance, students, courses]) => {
                 const studentMap = {};
                 const courseMap = {};
+                
+                coursesList = courses;
 
                 students.forEach(student => {
                     studentMap[student.id] = student;
@@ -304,18 +347,72 @@
                         studentName: student.name || "Unknown Student",
                         subject: courseMap[att.courseId] || "Unknown Subject",
                         status: att.status,
-                        time: formatDate(att.attendanceTime)
+                        time: formatDate(att.attendanceTime),
+                        rawTime: att.attendanceTime,
+                        groupName: student.groupName || "Not Assigned"
                     };
                 });
 
-                renderSubjectCards();
-                applySubjectFilter(selectedSubject);
+                // Populate Group Select dropdown dynamically from students and courses
+                const groups = [...new Set([
+                    ...students.map(s => s.groupName),
+                    ...courses.map(c => c.groupName)
+                ].filter(Boolean))].sort();
+                
+                const groupSelect = document.getElementById("groupSelect");
+                
+                let options = `<option value="ALL">All Groups</option>`;
+                groups.forEach(g => {
+                    options += `<option value="${g}">${g}</option>`;
+                });
+                groupSelect.innerHTML = options;
+                groupSelect.value = selectedGroup;
+
+                applyFilters();
             })
             .catch(() => alert("Error loading attendance report"));
     }
 
     function renderSubjectCards() {
-        const subjectCounts = getSubjectCounts(attendanceData);
+        let groupAttendance = [...attendanceData];
+        if (selectedGroup !== "ALL") {
+            groupAttendance = groupAttendance.filter(row => row.groupName === selectedGroup);
+        }
+
+        // Get unique subjects belonging to the selected group
+        const subjectsSet = new Set();
+        coursesList.forEach(course => {
+            if (selectedGroup === "ALL" || course.groupName === selectedGroup) {
+                subjectsSet.add(course.courseName);
+            }
+        });
+        
+        // Also capture any subject found in attendance records for safety
+        groupAttendance.forEach(row => {
+            if (row.subject) {
+                subjectsSet.add(row.subject);
+            }
+        });
+
+        const sortedSubjects = Array.from(subjectsSet).sort();
+
+        // Calculate counts for these subjects
+        const subjectCounts = {};
+        sortedSubjects.forEach(subject => {
+            subjectCounts[subject] = { total: 0, present: 0, absent: 0 };
+        });
+
+        groupAttendance.forEach(row => {
+            if (subjectCounts[row.subject]) {
+                subjectCounts[row.subject].total++;
+                if (row.status === "PRESENT") {
+                    subjectCounts[row.subject].present++;
+                } else {
+                    subjectCounts[row.subject].absent++;
+                }
+            }
+        });
+
         const cards = Object.entries(subjectCounts).map(([subject, count]) => `
             <article class="subject-card ${selectedSubject === subject ? "active" : ""}" onclick="applySubjectFilter('${escapeForClick(subject)}')">
                 <h3>${subject}</h3>
@@ -325,17 +422,68 @@
         `).join("");
 
         document.getElementById("subjectGrid").innerHTML =
-            cards || "<p>No attendance data available</p>";
+            cards || "<p>No subjects available for this group</p>";
     }
 
     function applySubjectFilter(subject) {
         selectedSubject = subject;
-        filteredData = subject === "ALL"
-            ? [...attendanceData]
-            : attendanceData.filter(row => row.subject === subject);
+        applyFilters();
+    }
 
-        document.getElementById("tableTitle").innerText =
-            subject === "ALL" ? "All Subject Attendance" : `${subject} Attendance`;
+    function applyGroupFilter() {
+        selectedGroup = document.getElementById("groupSelect").value;
+        selectedSubject = "ALL";
+        applyFilters();
+    }
+
+    function applyFilters() {
+        filteredData = [...attendanceData];
+
+        // 0. Group Filter
+        if (selectedGroup !== "ALL") {
+            filteredData = filteredData.filter(row => row.groupName === selectedGroup);
+        }
+
+        // 1. Subject Filter
+        if (selectedSubject !== "ALL") {
+            filteredData = filteredData.filter(row => row.subject === selectedSubject);
+        }
+
+        // 2. Daily Filter
+        if (selectedDate) {
+            filteredData = filteredData.filter(row => {
+                if (!row.rawTime) return false;
+                const d = new Date(row.rawTime);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}` === selectedDate;
+            });
+        }
+
+        // 3. Monthly Filter
+        if (selectedMonth) {
+            filteredData = filteredData.filter(row => {
+                if (!row.rawTime) return false;
+                const d = new Date(row.rawTime);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                return `${year}-${month}` === selectedMonth;
+            });
+        }
+
+        // Update Title
+        let title = selectedSubject === "ALL" ? "All Subject Attendance" : `${selectedSubject} Attendance`;
+        if (selectedGroup !== "ALL") {
+            title = `${selectedGroup} - ${title}`;
+        }
+        if (selectedDate) {
+            title += ` - Daily (${formatLocalDateString(selectedDate)})`;
+        } else if (selectedMonth) {
+            title += ` - Monthly (${formatLocalMonthString(selectedMonth)})`;
+        }
+        
+        document.getElementById("tableTitle").innerText = title;
         document.getElementById("visibleCount").innerText = filteredData.length;
 
         renderSubjectCards();
@@ -343,8 +491,56 @@
         renderChart(filteredData);
     }
 
-    function clearSubjectFilter() {
-        applySubjectFilter("ALL");
+    function formatLocalDateString(dateStr) {
+        if (!dateStr) return "";
+        const parts = dateStr.split('-');
+        if (parts.length < 3) return dateStr;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function formatLocalMonthString(monthStr) {
+        if (!monthStr) return "";
+        const parts = monthStr.split('-');
+        if (parts.length < 2) return monthStr;
+        const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return `${months[parseInt(parts[1]) - 1]} ${parts[0]}`;
+    }
+
+    function enableDailyFilter() {
+        document.getElementById("dailyPicker").style.display = "inline-block";
+        document.getElementById("monthlyPicker").style.display = "none";
+        selectedMonth = null;
+        document.getElementById("monthlyPicker").value = "";
+    }
+
+    function enableMonthlyFilter() {
+        document.getElementById("monthlyPicker").style.display = "inline-block";
+        document.getElementById("dailyPicker").style.display = "none";
+        selectedDate = null;
+        document.getElementById("dailyPicker").value = "";
+    }
+
+    function applyDailyFilter() {
+        selectedDate = document.getElementById("dailyPicker").value;
+        applyFilters();
+    }
+
+    function applyMonthlyFilter() {
+        selectedMonth = document.getElementById("monthlyPicker").value;
+        applyFilters();
+    }
+
+    function clearAllFilters() {
+        selectedSubject = "ALL";
+        selectedGroup = "ALL";
+        selectedDate = null;
+        selectedMonth = null;
+        document.getElementById("groupSelect").value = "ALL";
+        document.getElementById("dailyPicker").value = "";
+        document.getElementById("monthlyPicker").value = "";
+        document.getElementById("dailyPicker").style.display = "none";
+        document.getElementById("monthlyPicker").style.display = "none";
+        applyFilters();
     }
 
     function renderTable(data) {
@@ -352,6 +548,7 @@
             <tr>
                 <td>${row.rollNo}</td>
                 <td>${row.studentName}</td>
+                <td>${row.groupName}</td>
                 <td>${row.subject}</td>
                 <td class="${row.status === "PRESENT" ? "status-present" : "status-absent"}">${row.status}</td>
                 <td>${row.time}</td>
@@ -359,23 +556,38 @@
         `).join("");
 
         document.getElementById("attendanceBody").innerHTML =
-            rows || "<tr><td colspan='5'>No attendance records found</td></tr>";
+            rows || "<tr><td colspan='6'>No attendance records found</td></tr>";
     }
 
     function renderChart(data) {
-        const subjectCounts = getSubjectCounts(data);
-
         if (chart) {
             chart.destroy();
+        }
+
+        let labels = [];
+        let chartData = [];
+        let backgroundColors = [];
+
+        if (selectedSubject === "ALL") {
+            const subjectCounts = getSubjectCounts(data);
+            labels = Object.keys(subjectCounts);
+            chartData = Object.values(subjectCounts).map(item => item.total);
+            backgroundColors = ["#2563eb", "#06b6d4", "#ec4899", "#f59e0b", "#22c55e", "#8b5cf6", "#14b8a6", "#f43f5e"];
+        } else {
+            const presentCount = data.filter(row => row.status === "PRESENT").length;
+            const absentCount = data.filter(row => row.status === "ABSENT").length;
+            labels = ["Present", "Absent"];
+            chartData = [presentCount, absentCount];
+            backgroundColors = ["#22c55e", "#ef4444"];
         }
 
         chart = new Chart(document.getElementById("attendanceChart"), {
             type: "doughnut",
             data: {
-                labels: Object.keys(subjectCounts),
+                labels: labels,
                 datasets: [{
-                    data: Object.values(subjectCounts).map(item => item.total),
-                    backgroundColor: ["#2563eb", "#06b6d4", "#ec4899", "#f59e0b", "#22c55e"],
+                    data: chartData,
+                    backgroundColor: backgroundColors.slice(0, labels.length),
                     borderWidth: 0
                 }]
             },
@@ -408,10 +620,11 @@
             return;
         }
 
-        const headers = ["Roll No", "Student Name", "Subject", "Status", "Time"];
+        const headers = ["Roll No", "Student Name", "Group", "Subject", "Status", "Time"];
         const rows = filteredData.map(row => [
             row.rollNo,
             row.studentName,
+            row.groupName,
             row.subject,
             row.status,
             row.time

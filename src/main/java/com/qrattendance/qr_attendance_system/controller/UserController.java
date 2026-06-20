@@ -89,8 +89,13 @@ public class UserController {
 
         Student student = studentRepository.findByEmail(loginRequest.getEmail());
 
-        if (student != null && !passwordService.matches(loginRequest.getPassword(), student.getPassword())) {
-            student = null;
+        if (student != null) {
+            if (!student.isApproved()) {
+                throw new RuntimeException("Access pending Admin approval");
+            }
+            if (!passwordService.matches(loginRequest.getPassword(), student.getPassword())) {
+                student = null;
+            }
         }
 
         if (student != null) {

@@ -106,7 +106,7 @@
 
         .subject-row {
             display: grid;
-            grid-template-columns: 1fr 44px;
+            grid-template-columns: 1fr 1fr 44px;
             gap: 10px;
             margin: 10px 0;
         }
@@ -128,6 +128,18 @@
 
         button.delete-btn, button.remove-btn {
             background: var(--danger);
+        }
+
+        button.edit-btn {
+            background: linear-gradient(90deg, #f59e0b, #eab308);
+        }
+
+        button.save-btn {
+            background: var(--green);
+        }
+
+        button.cancel-btn {
+            background: var(--muted);
         }
 
         button:disabled {
@@ -231,10 +243,6 @@
                 <input type="text" id="groupName" list="groupOptions" placeholder="Type or select group name">
                 <datalist id="groupOptions"></datalist>
             </div>
-            <div>
-                <label for="lecturerName">Lecturer / Professor Name</label>
-                <input type="text" id="lecturerName" placeholder="Dr. Ramesh">
-            </div>
         </div>
 
         <label>Subjects</label>
@@ -290,8 +298,15 @@
             .sort(([groupA], [groupB]) => groupA.localeCompare(groupB))
             .map(([group, groupSubjects]) => `
                 <article class="group-card">
-                    <div class="group-head">
-                        <h3>${escapeHtml(group)}</h3>
+                    <div class="group-head" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; background: linear-gradient(90deg, rgba(37,99,235,.12), rgba(6,182,212,.12));">
+                        <h3 style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                            ${escapeHtml(group)}
+                            ${group !== "Not Assigned" ? `
+                            <button onclick="editGroupName('${escapeForClick(group)}')" class="edit-btn" style="min-height: auto; padding: 4px 8px; font-size: 12px; border-radius: 4px;" title="Rename Group">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            ` : ""}
+                        </h3>
                         <span class="count-pill">${groupSubjects.length} Subjects</span>
                     </div>
                     <table>
@@ -310,6 +325,9 @@
                                     <td>${escapeHtml(subject.courseName)}</td>
                                     <td>${escapeHtml(subject.lecturerName || "Not Assigned")}</td>
                                     <td>
+                                        <button class="edit-btn" onclick="startEdit(${subject.id}, this)">
+                                            <i class="fa-solid fa-pen-to-square"></i> Edit
+                                        </button>
                                         <button class="delete-btn" onclick="deleteSubject(${subject.id})">
                                             <i class="fa-solid fa-trash"></i> Delete
                                         </button>
@@ -325,11 +343,12 @@
             output || "<p>No subjects found</p>";
     }
 
-    function addSubjectRow(value = "") {
+    function addSubjectRow(subjectName = "", lecturerName = "") {
         const row = document.createElement("div");
         row.className = "subject-row";
         row.innerHTML = `
-            <input type="text" class="subject-input" placeholder="Subject name" value="${escapeHtml(value)}">
+            <input type="text" class="subject-input" placeholder="Subject name" value="${escapeHtml(subjectName)}">
+            <input type="text" class="lecturer-input" placeholder="Lecturer / Professor name" value="${escapeHtml(lecturerName)}">
             <button class="remove-btn" onclick="removeSubjectRow(this)" title="Remove subject">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -348,10 +367,26 @@
 
     function saveSubjects() {
         const groupName = document.getElementById("groupName").value.trim();
-        const lecturerName = document.getElementById("lecturerName").value.trim();
-        const subjects = [...document.querySelectorAll(".subject-input")]
-            .map(input => input.value.trim())
-            .filter(Boolean);
+        const subjectRows = document.querySelectorAll(".subject-row");
+        const subjects = [];
+
+        for (let row of subjectRows) {
+            const subjectName = row.querySelector(".subject-input").value.trim();
+            const lecturerName = row.querySelector(".lecturer-input").value.trim();
+
+            if (subjectName || lecturerName) {
+                if (!subjectName) {
+                    showMessage("Subject name is required for all entered rows.", true);
+                    return;
+                }
+                if (!lecturerName) {
+                    showMessage("Lecturer name is required for all entered rows.", true);
+                    return;
+                }
+                subjects.push({ courseName: subjectName, lecturerName: lecturerName });
+            }
+        }
+
         const saveBtn = document.getElementById("saveBtn");
 
         if (!groupName) {
@@ -359,13 +394,8 @@
             return;
         }
 
-        if (!lecturerName) {
-            showMessage("Lecturer / Professor name is required.", true);
-            return;
-        }
-
         if (subjects.length === 0) {
-            showMessage("Enter at least one subject.", true);
+            showMessage("Enter at least one subject and its lecturer.", true);
             return;
         }
 
@@ -375,7 +405,7 @@
         fetch(`${API_BASE}/courses/batch`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ groupName, lecturerName, subjects })
+            body: JSON.stringify({ groupName, subjects })
         })
             .then(response => {
                 if (!response.ok) {
@@ -396,9 +426,80 @@
 
     function resetForm() {
         document.getElementById("groupName").value = "";
-        document.getElementById("lecturerName").value = "";
         document.getElementById("subjectRows").innerHTML = "";
         addSubjectRow();
+    }
+
+    function startEdit(id, button) {
+        const row = button.closest("tr");
+        const lecturerCell = row.cells[2];
+        const actionCell = row.cells[3];
+        
+        const currentLecturer = lecturerCell.innerText;
+        row.setAttribute("data-old-lecturer", currentLecturer);
+        
+        lecturerCell.innerHTML = `<input type="text" class="inline-lecturer-input" value="${escapeHtml(currentLecturer)}" style="min-height: 32px; padding: 6px 10px; width: 100%;">`;
+        
+        actionCell.innerHTML = `
+            <button class="save-btn" onclick="saveEdit(${id}, this)" style="padding: 6px 12px; min-height: auto; font-size: 13px;">
+                <i class="fa-solid fa-check"></i> Save
+            </button>
+            <button class="cancel-btn" onclick="cancelEdit(${id}, this)" style="padding: 6px 12px; min-height: auto; font-size: 13px; margin-left: 5px;">
+                <i class="fa-solid fa-xmark"></i> Cancel
+            </button>
+        `;
+    }
+    
+    function cancelEdit(id, button) {
+        const row = button.closest("tr");
+        const lecturerCell = row.cells[2];
+        const actionCell = row.cells[3];
+        
+        const oldLecturer = row.getAttribute("data-old-lecturer");
+        lecturerCell.innerText = oldLecturer;
+        
+        actionCell.innerHTML = `
+            <button class="edit-btn" onclick="startEdit(${id}, this)" style="padding: 6px 12px; min-height: auto; font-size: 13px;">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+            </button>
+            <button class="delete-btn" onclick="deleteSubject(${id})" style="padding: 6px 12px; min-height: auto; font-size: 13px; margin-left: 5px;">
+                <i class="fa-solid fa-trash"></i> Delete
+            </button>
+        `;
+    }
+    
+    function saveEdit(id, button) {
+        const row = button.closest("tr");
+        const lecturerCell = row.cells[2];
+        const input = lecturerCell.querySelector(".inline-lecturer-input");
+        const newLecturer = input.value.trim();
+        
+        if (!newLecturer) {
+            alert("Lecturer / Professor name cannot be empty.");
+            return;
+        }
+        
+        button.disabled = true;
+        
+        fetch(`${API_BASE}/courses/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lecturerName: newLecturer })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to update lecturer name");
+                }
+                return response.json();
+            })
+            .then(() => {
+                showMessage("Lecturer name updated successfully.");
+                loadSubjects();
+            })
+            .catch(() => {
+                showMessage("Error updating lecturer name.", true);
+                button.disabled = false;
+            });
     }
 
     function deleteSubject(id) {
@@ -428,6 +529,38 @@
             .replaceAll(">", "&gt;")
             .replaceAll('"', "&quot;")
             .replaceAll("'", "&#039;");
+    }
+
+    function editGroupName(oldName) {
+        const newName = prompt(`Rename group "${oldName}" to:`, oldName);
+        if (newName === null) return; // Cancelled
+        
+        const trimmed = newName.trim();
+        if (!trimmed) {
+            alert("Group name cannot be empty.");
+            return;
+        }
+        
+        if (trimmed === oldName) return; // No change
+        
+        fetch(`${API_BASE}/courses/group/rename?oldGroupName=${encodeURIComponent(oldName)}&newGroupName=${encodeURIComponent(trimmed)}`, {
+            method: "PUT"
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to rename group");
+                }
+                return response.text();
+            })
+            .then(msg => {
+                showMessage(msg);
+                loadSubjects();
+            })
+            .catch(() => showMessage("Error renaming group.", true));
+    }
+    
+    function escapeForClick(value) {
+        return String(value).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
     }
 
     function logout() {

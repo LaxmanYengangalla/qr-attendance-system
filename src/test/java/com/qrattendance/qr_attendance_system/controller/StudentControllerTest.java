@@ -84,8 +84,7 @@ class StudentControllerTest {
 
     @Test
     void getAllCountAndDeleteStudent() throws Exception {
-        when(studentRepository.findAll()).thenReturn(List.of(student("A", "1", "a@example.com", "MSC", "p")));
-        when(studentRepository.count()).thenReturn(1L);
+        when(studentRepository.findByApproved(true)).thenReturn(List.of(student("A", "1", "a@example.com", "MSC", "p")));
 
         mockMvc.perform(get("/students"))
                 .andExpect(status().isOk())

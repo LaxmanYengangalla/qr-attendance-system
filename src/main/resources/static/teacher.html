@@ -6,7 +6,7 @@
     <style>
         :root {
             --page: #eef5ff;
-            --panel: #ffffff;
+            --panel: rgba(255, 255, 255, 0.72);
             --text: #172033;
             --muted: #64748b;
             --line: #dbe5f5;
@@ -19,7 +19,7 @@
 
         body.dark {
             --page: #0f172a;
-            --panel: #111827;
+            --panel: rgba(17, 24, 39, 0.72);
             --text: #f8fafc;
             --muted: #cbd5e1;
             --line: #334155;
@@ -34,9 +34,33 @@
             min-height: 100vh;
             font-family: Arial, sans-serif;
             color: var(--text);
+            position: relative;
+            overflow-x: hidden;
+            background: var(--page);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
             background:
-                linear-gradient(135deg, rgba(37,99,235,.16), rgba(6,182,212,.16)),
-                var(--page);
+                linear-gradient(135deg, rgba(37,99,235,.12), rgba(6,182,212,.12)),
+                url("bg.png") no-repeat center center fixed;
+            background-size: cover;
+            filter: blur(4px) brightness(0.95);
+            transform: scale(1.05);
+        }
+
+        body.dark::before {
+            background:
+                linear-gradient(135deg, rgba(15,23,42,.8), rgba(37,99,235,.4)),
+                url("bg.png") no-repeat center center fixed;
+            background-size: cover;
+            filter: blur(4px) brightness(0.45) contrast(1.1);
         }
 
         .shell {
@@ -113,6 +137,8 @@
 
         .panel {
             background: var(--panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--line);
             border-radius: 8px;
             padding: 22px;
@@ -345,9 +371,14 @@
 
     <section class="grid">
         <div class="panel">
-            <label for="courseSelect">Course</label>
+            <label for="groupSelect">Group</label>
+            <select id="groupSelect" onchange="filterCoursesByGroup()">
+                <option value="">Loading groups...</option>
+            </select>
+
+            <label for="courseSelect" style="margin-top: 14px;">Course</label>
             <select id="courseSelect">
-                <option value="">Loading courses...</option>
+                <option value="">Select a group first</option>
             </select>
 
             <div class="control-row">
@@ -455,6 +486,7 @@
     let activeSession = null;
     let countdownTimer = null;
     let presentCountTimer = null;
+    let allCourses = [];
 
     document.addEventListener("DOMContentLoaded", () => {
         guardTeacherAccess();
@@ -485,22 +517,57 @@
         fetch(`${API_BASE}/courses`)
             .then(response => response.json())
             .then(courses => {
-                const select = document.getElementById("courseSelect");
-                select.innerHTML = "<option value=''>Select course</option>";
-
-                courses.forEach(course => {
-                    const option = document.createElement("option");
-                    option.value = course.id;
-                    option.textContent = `${course.courseName} (ID ${course.id})`;
-                    option.dataset.name = course.courseName;
-                    select.appendChild(option);
-                });
-
-                if (courses.length === 0) {
-                    select.innerHTML = "<option value=''>No courses available</option>";
-                }
+                allCourses = courses;
+                populateGroups();
             })
             .catch(() => showMessage("Could not load courses. Please check the server.", true));
+    }
+
+    function populateGroups() {
+        const groupSelect = document.getElementById("groupSelect");
+        groupSelect.innerHTML = "<option value=''>Select group</option>";
+        
+        // Extract unique groups and sort them alphabetically
+        const groups = [...new Set(allCourses.map(c => c.groupName).filter(Boolean))].sort();
+        
+        groups.forEach(group => {
+            const option = document.createElement("option");
+            option.value = group;
+            option.textContent = group;
+            groupSelect.appendChild(option);
+        });
+
+        if (groups.length === 0) {
+            groupSelect.innerHTML = "<option value=''>No groups available</option>";
+        }
+
+        const courseSelect = document.getElementById("courseSelect");
+        courseSelect.innerHTML = "<option value=''>Select a group first</option>";
+    }
+
+    function filterCoursesByGroup() {
+        const selectedGroup = document.getElementById("groupSelect").value;
+        const courseSelect = document.getElementById("courseSelect");
+        
+        if (!selectedGroup) {
+            courseSelect.innerHTML = "<option value=''>Select a group first</option>";
+            return;
+        }
+
+        const filtered = allCourses.filter(c => c.groupName === selectedGroup);
+        courseSelect.innerHTML = "<option value=''>Select course</option>";
+        
+        filtered.forEach(course => {
+            const option = document.createElement("option");
+            option.value = course.id;
+            option.textContent = `${course.courseName} (ID ${course.id})`;
+            option.dataset.name = course.courseName;
+            courseSelect.appendChild(option);
+        });
+
+        if (filtered.length === 0) {
+            courseSelect.innerHTML = "<option value=''>No courses available for this group</option>";
+        }
     }
 
     function generateQR() {

@@ -116,6 +116,7 @@
         <button onclick="addTeacher()">Add Lecturer/Professor</button>
     </div>
 
+    <h3>Approved Lecturers</h3>
     <table>
         <thead>
             <tr>
@@ -128,6 +129,20 @@
         </thead>
         <tbody id="teacherTableBody"></tbody>
     </table>
+
+    <h3 style="margin-top: 40px;">Pending Lecturer Requests</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Subject</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="pendingTableBody"></tbody>
+    </table>
 </div>
 
 <script>
@@ -139,6 +154,7 @@
     }
 
     function loadTeachers() {
+        // Load approved teachers
         fetch(`${API_BASE}/teachers`)
             .then(response => response.json())
             .then(data => {
@@ -160,19 +176,57 @@
                     `;
                 });
 
-                document.getElementById("teacherTableBody").innerHTML = rows;
+                document.getElementById("teacherTableBody").innerHTML = 
+                    rows || "<tr><td colspan='5'>No approved lecturers found</td></tr>";
             })
             .catch(error => {
                 alert("Error loading lecturer/professors");
+            });
+
+        // Load pending teachers
+        fetch(`${API_BASE}/admin/teachers/pending`)
+            .then(response => response.json())
+            .then(data => {
+                let rows = "";
+
+                data.forEach(teacher => {
+                    rows += `
+                        <tr>
+                            <td>${teacher.id}</td>
+                            <td>${teacher.name}</td>
+                            <td>${teacher.email}</td>
+                            <td>${teacher.subject}</td>
+                            <td>
+                                <button onclick="approveTeacher(${teacher.id})">
+                                    Approve
+                                </button>
+                                <button class="delete-btn" onclick="rejectTeacher(${teacher.id})">
+                                    Reject
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById("pendingTableBody").innerHTML = 
+                    rows || "<tr><td colspan='5'>No pending requests found</td></tr>";
+            })
+            .catch(error => {
+                alert("Error loading pending requests");
             });
     }
 
     function addTeacher() {
         const teacher = {
-            name: document.getElementById("name").value,
-            email: document.getElementById("email").value,
-            subject: document.getElementById("subject").value
+            name: document.getElementById("name").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            subject: document.getElementById("subject").value.trim()
         };
+
+        if (!teacher.name || !teacher.email || !teacher.subject) {
+            alert("Please fill all fields");
+            return;
+        }
 
         fetch(`${API_BASE}/teachers`, {
             method: "POST",
@@ -184,10 +238,45 @@
         .then(response => response.json())
         .then(data => {
             alert("Lecturer/Professor added successfully");
-            location.reload();
+            document.getElementById("name").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("subject").value = "";
+            loadTeachers();
         })
         .catch(error => {
             alert("Error adding lecturer/professor");
+        });
+    }
+
+    function approveTeacher(id) {
+        fetch(`${API_BASE}/admin/teachers/${id}/approve`, {
+            method: "POST"
+        })
+        .then(response => response.text())
+        .then(message => {
+            alert(message);
+            loadTeachers();
+        })
+        .catch(error => {
+            alert("Error approving lecturer");
+        });
+    }
+
+    function rejectTeacher(id) {
+        if (!confirm("Reject this request?")) {
+            return;
+        }
+
+        fetch(`${API_BASE}/admin/teachers/pending/${id}`, {
+            method: "DELETE"
+        })
+        .then(response => response.text())
+        .then(message => {
+            alert(message);
+            loadTeachers();
+        })
+        .catch(error => {
+            alert("Error rejecting request");
         });
     }
 
@@ -202,7 +291,7 @@
         .then(response => response.text())
         .then(message => {
             alert(message);
-            location.reload();
+            loadTeachers();
         })
         .catch(error => {
             alert("Error deleting lecturer/professor");

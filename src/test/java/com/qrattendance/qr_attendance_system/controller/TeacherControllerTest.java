@@ -11,15 +11,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.qrattendance.qr_attendance_system.model.Teacher;
 import com.qrattendance.qr_attendance_system.repository.TeacherRepository;
+import com.qrattendance.qr_attendance_system.repository.UserRepository;
+import com.qrattendance.qr_attendance_system.service.PasswordService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -31,17 +35,28 @@ class TeacherControllerTest {
     @Mock
     private TeacherRepository teacherRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private PasswordService passwordService;
+
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new TeacherController(teacherRepository)).build();
+        TeacherController controller = new TeacherController();
+        ReflectionTestUtils.setField(controller, "teacherRepository", teacherRepository);
+        ReflectionTestUtils.setField(controller, "userRepository", userRepository);
+        ReflectionTestUtils.setField(controller, "passwordService", passwordService);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     @Test
     void addFindCountAndDeleteTeacher() throws Exception {
         Teacher teacher = teacher("Prof. Kumar", "kumar@example.com", "Java");
         when(teacherRepository.save(any(Teacher.class))).thenReturn(teacher);
-        when(teacherRepository.findAll()).thenReturn(List.of(teacher));
-        when(teacherRepository.count()).thenReturn(1L);
+        when(teacherRepository.findByApproved(true)).thenReturn(List.of(teacher));
+        when(passwordService.hash(any(String.class))).thenReturn("sha256$hash");
+        when(teacherRepository.findById(2L)).thenReturn(Optional.of(teacher));
 
         mockMvc.perform(post("/teachers")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -59,7 +74,7 @@ class TeacherControllerTest {
         mockMvc.perform(delete("/teachers/2"))
                 .andExpect(status().isOk());
 
-        verify(teacherRepository).deleteById(2L);
+        verify(teacherRepository).delete(teacher);
     }
 
     private Teacher teacher(String name, String email, String subject) {

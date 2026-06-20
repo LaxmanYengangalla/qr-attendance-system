@@ -6,7 +6,7 @@
     <style>
         :root {
             --bg: #f6f9ff;
-            --panel: #ffffff;
+            --panel: rgba(255, 255, 255, 0.72);
             --text: #172033;
             --muted: #64748b;
             --line: #dbe7fb;
@@ -19,10 +19,26 @@
             margin: 0;
             font-family: Arial, sans-serif;
             color: var(--text);
+            position: relative;
+            overflow-x: hidden;
+            background: var(--bg);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
             background:
-                radial-gradient(circle at top left, rgba(37,99,235,.14), transparent 32%),
-                radial-gradient(circle at top right, rgba(6,182,212,.14), transparent 34%),
-                linear-gradient(180deg, #f8fbff, var(--bg));
+                radial-gradient(circle at top left, rgba(37,99,235,.1), transparent 32%),
+                radial-gradient(circle at top right, rgba(6,182,212,.1), transparent 34%),
+                url("bg.png") no-repeat center center fixed;
+            background-size: cover;
+            filter: blur(4px) brightness(0.95);
+            transform: scale(1.05);
         }
 
         .header {
@@ -37,6 +53,8 @@
         .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 25px; }
         .card, .panel {
             background: var(--panel);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--line);
             border-radius: 8px;
             box-shadow: 0 14px 35px rgba(31,41,55,.10);
@@ -93,8 +111,68 @@
         </div>
     </div>
 
+    <div class="grid" style="margin-top:20px;">
+        <div class="panel">
+            <h3>Daily Attendance Finder</h3>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <label for="statsDate" style="font-weight: bold; min-width: 90px; margin-bottom: 0;">Select Date:</label>
+                <input type="date" id="statsDate" onchange="onDailyDateChange()" style="padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; outline: none; flex-grow: 1; min-height: auto; width: auto; background: var(--panel); color: var(--text);">
+            </div>
+            <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 12px; flex: 1; text-align: center;">
+                    <span style="color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px;">Present Classes</span>
+                    <strong id="dailyPresent" style="font-size: 24px; color: #16a34a;">0</strong>
+                </div>
+                <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; padding: 12px; flex: 1; text-align: center;">
+                    <span style="color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px;">Absent Classes</span>
+                    <strong id="dailyAbsent" style="font-size: 24px; color: var(--danger);">0</strong>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Subject</th><th>Status</th><th>Time</th></tr></thead>
+                <tbody id="dailyBody"></tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h3>Monthly Attendance Finder</h3>
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <label for="statsMonth" style="font-weight: bold; min-width: 90px; margin-bottom: 0;">Select Month:</label>
+                <input type="month" id="statsMonth" onchange="onMonthlyMonthChange()" style="padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; outline: none; flex-grow: 1; min-height: auto; width: auto; background: var(--panel); color: var(--text);">
+            </div>
+            <div style="display: flex; gap: 20px; margin-bottom: 15px;">
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 12px; flex: 1; text-align: center;">
+                    <span style="color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px;">Present Classes</span>
+                    <strong id="monthlyPresent" style="font-size: 24px; color: #16a34a;">0</strong>
+                </div>
+                <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; padding: 12px; flex: 1; text-align: center;">
+                    <span style="color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px;">Absent Classes</span>
+                    <strong id="monthlyAbsent" style="font-size: 24px; color: var(--danger);">0</strong>
+                </div>
+                <div style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 8px; padding: 12px; flex: 1; text-align: center;">
+                    <span style="color: var(--muted); font-size: 13px; display: block; margin-bottom: 4px;">Attendance %</span>
+                    <strong id="monthlyPercentage" style="font-size: 24px; color: var(--primary);">0%</strong>
+                </div>
+            </div>
+            <table>
+                <thead><tr><th>Subject</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody id="monthlyBody"></tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="panel" style="margin-top:20px;">
-        <h3>Attendance History</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0;">Attendance History</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label for="historyFilter" style="font-weight: bold; margin-bottom: 0; font-size: 14px; color: var(--muted);">Filter History:</label>
+                <select id="historyFilter" onchange="filterMainHistory()" style="padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; background: var(--panel); color: var(--text); outline: none; min-height: auto; width: auto;">
+                    <option value="all">All History</option>
+                    <option value="day">Selected Day</option>
+                    <option value="month">Selected Month</option>
+                </select>
+            </div>
+        </div>
         <table>
             <thead><tr><th>S.No</th><th>Subject</th><th>Status</th><th>Time</th></tr></thead>
             <tbody id="historyBody"></tbody>
@@ -109,6 +187,7 @@
     const API_BASE = window.location.origin;
     let courseChart;
     let courseMap = {};
+    let attendanceHistory = [];
 
     if (!studentId) {
         const query = window.location.search;
@@ -188,13 +267,136 @@
             loadCourses()
         ])
             .then(([data]) => {
-                let rows = "";
-                data.forEach((att, index) => {
-                    rows += `<tr><td>${index + 1}</td><td>${courseMap[att.courseId] || "Unknown Subject"}</td><td>${att.status}</td><td>${att.attendanceTime ? new Date(att.attendanceTime).toLocaleString() : ""}</td></tr>`;
-                });
-                document.getElementById("historyBody").innerHTML =
-                    rows || "<tr><td colspan='4'>No attendance history found</td></tr>";
+                attendanceHistory = data;
+
+                if (!document.getElementById("statsDate").value) {
+                    const localDate = new Date();
+                    const year = localDate.getFullYear();
+                    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(localDate.getDate()).padStart(2, '0');
+                    document.getElementById("statsDate").value = `${year}-${month}-${day}`;
+                }
+                if (!document.getElementById("statsMonth").value) {
+                    const localMonth = new Date();
+                    const year = localMonth.getFullYear();
+                    const month = String(localMonth.getMonth() + 1).padStart(2, '0');
+                    document.getElementById("statsMonth").value = `${year}-${month}`;
+                }
+
+                updateDailyStats();
+                updateMonthlyStats();
+                filterMainHistory();
             });
+    }
+
+    function onDailyDateChange() {
+        updateDailyStats();
+        document.getElementById("historyFilter").value = "day";
+        filterMainHistory();
+    }
+
+    function onMonthlyMonthChange() {
+        updateMonthlyStats();
+        document.getElementById("historyFilter").value = "month";
+        filterMainHistory();
+    }
+
+    function updateDailyStats() {
+        const selectedDateStr = document.getElementById("statsDate").value;
+        if (!selectedDateStr) return;
+
+        const dailyAtt = attendanceHistory.filter(att => {
+            if (!att.attendanceTime) return false;
+            const attDate = att.attendanceTime.substring(0, 10); // Timezone-robust YYYY-MM-DD parsing
+            return attDate === selectedDateStr;
+        });
+
+        let presentCount = 0;
+        let absentCount = 0;
+        let rows = "";
+
+        dailyAtt.forEach(att => {
+            if (att.status === "PRESENT") {
+                presentCount++;
+            } else if (att.status === "ABSENT") {
+                absentCount++;
+            }
+            const timeStr = att.attendanceTime ? new Date(att.attendanceTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+            rows += `<tr><td>${courseMap[att.courseId] || "Unknown Subject"}</td><td>${att.status}</td><td>${timeStr}</td></tr>`;
+        });
+
+        document.getElementById("dailyPresent").innerText = presentCount;
+        document.getElementById("dailyAbsent").innerText = absentCount;
+        document.getElementById("dailyBody").innerHTML = rows || "<tr><td colspan='3' style='text-align: center; color: var(--muted);'>No records for this day</td></tr>";
+    }
+
+    function updateMonthlyStats() {
+        const selectedMonthStr = document.getElementById("statsMonth").value;
+        if (!selectedMonthStr) return;
+
+        const [year, month] = selectedMonthStr.split("-").map(Number);
+
+        const monthlyAtt = attendanceHistory.filter(att => {
+            if (!att.attendanceTime) return false;
+            const attMonth = att.attendanceTime.substring(0, 7); // Timezone-robust YYYY-MM parsing
+            return attMonth === selectedMonthStr;
+        });
+
+        let presentCount = 0;
+        let absentCount = 0;
+        let rows = "";
+
+        monthlyAtt.forEach(att => {
+            if (att.status === "PRESENT") {
+                presentCount++;
+            } else if (att.status === "ABSENT") {
+                absentCount++;
+            }
+            const dateStr = att.attendanceTime ? new Date(att.attendanceTime).toLocaleDateString() : "";
+            rows += `<tr><td>${courseMap[att.courseId] || "Unknown Subject"}</td><td>${att.status}</td><td>${dateStr}</td></tr>`;
+        });
+
+        const total = presentCount + absentCount;
+        const pctStr = total > 0 ? `${((presentCount / total) * 100).toFixed(1)}%` : "0%";
+
+        document.getElementById("monthlyPresent").innerText = presentCount;
+        document.getElementById("monthlyAbsent").innerText = absentCount;
+        document.getElementById("monthlyPercentage").innerText = pctStr;
+        document.getElementById("monthlyBody").innerHTML = rows || "<tr><td colspan='3' style='text-align: center; color: var(--muted);'>No records for this month</td></tr>";
+    }
+
+    function filterMainHistory() {
+        const filterVal = document.getElementById("historyFilter").value;
+        let filteredData = [];
+
+        if (filterVal === "day") {
+            const selectedDateStr = document.getElementById("statsDate").value;
+            if (selectedDateStr) {
+                filteredData = attendanceHistory.filter(att => {
+                    if (!att.attendanceTime) return false;
+                    const attDate = att.attendanceTime.substring(0, 10);
+                    return attDate === selectedDateStr;
+                });
+            }
+        } else if (filterVal === "month") {
+            const selectedMonthStr = document.getElementById("statsMonth").value;
+            if (selectedMonthStr) {
+                filteredData = attendanceHistory.filter(att => {
+                    if (!att.attendanceTime) return false;
+                    const attMonth = att.attendanceTime.substring(0, 7);
+                    return attMonth === selectedMonthStr;
+                });
+            }
+        } else {
+            filteredData = attendanceHistory;
+        }
+
+        let rows = "";
+        filteredData.forEach((att, index) => {
+            rows += `<tr><td>${index + 1}</td><td>${courseMap[att.courseId] || "Unknown Subject"}</td><td>${att.status}</td><td>${att.attendanceTime ? new Date(att.attendanceTime).toLocaleString() : ""}</td></tr>`;
+        });
+        document.getElementById("historyBody").innerHTML =
+            rows || "<tr><td colspan='4' style='text-align: center; color: var(--muted);'>No attendance history found for this filter</td></tr>";
     }
 
     function loadCourses() {

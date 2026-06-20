@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,8 +75,16 @@ class CourseControllerTest {
     void addBatchCoursesReturnsSavedCourses() throws Exception {
         CourseController.SubjectBatchRequest request = new CourseController.SubjectBatchRequest();
         request.setGroupName("MSC Computer Science");
-        request.setLecturerName("Dr. Rao");
-        request.setSubjects(List.of("Java", "Python"));
+        
+        CourseController.SubjectEntry e1 = new CourseController.SubjectEntry();
+        e1.setCourseName("Java");
+        e1.setLecturerName("Dr. Rao");
+        
+        CourseController.SubjectEntry e2 = new CourseController.SubjectEntry();
+        e2.setCourseName("Python");
+        e2.setLecturerName("Dr. Rao");
+        
+        request.setSubjects(List.of(e1, e2));
 
         when(courseRepository.saveAll(any())).thenReturn(List.of(
                 course("Java", "MSC Computer Science", "Dr. Rao"),
@@ -83,7 +92,7 @@ class CourseControllerTest {
 
         mockMvc.perform(post("/courses/batch")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"groupName\":\"MSC Computer Science\",\"lecturerName\":\"Dr. Rao\",\"subjects\":[\"Java\",\"Python\"]}"))
+                        .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[{\"courseName\":\"Java\",\"lecturerName\":\"Dr. Rao\"},{\"courseName\":\"Python\",\"lecturerName\":\"Dr. Rao\"}]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
     }
@@ -92,13 +101,30 @@ class CourseControllerTest {
     void addBatchCoursesRejectsEmptySubjectListAndLecturer() throws Exception {
         CourseController.SubjectBatchRequest request = new CourseController.SubjectBatchRequest();
         request.setGroupName("MSC Computer Science");
-        request.setLecturerName("");
         request.setSubjects(List.of());
 
         mockMvc.perform(post("/courses/batch")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"groupName\":\"MSC Computer Science\",\"lecturerName\":\"\",\"subjects\":[]}"))
+                        .content("{\"groupName\":\"MSC Computer Science\",\"subjects\":[]}"))
                 .andExpect(status().is5xxServerError());
+    }
+
+    @Test
+    void updateCourseReturnsUpdatedCourse() throws Exception {
+        Course existing = course("Java", "MSC Computer Science", "Dr. Rao");
+        existing.setId(4L);
+
+        Course updated = course("Java", "MSC Computer Science", "Dr. Prasad");
+        updated.setId(4L);
+
+        when(courseRepository.findById(4L)).thenReturn(java.util.Optional.of(existing));
+        when(courseRepository.save(any(Course.class))).thenReturn(updated);
+
+        mockMvc.perform(put("/courses/4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"lecturerName\":\"Dr. Prasad\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lecturerName").value("Dr. Prasad"));
     }
 
     @Test

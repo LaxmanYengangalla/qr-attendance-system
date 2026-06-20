@@ -70,14 +70,54 @@ public class StudentController {
             student.setPassword(student.getRollNo());
         }
         student.setPassword(passwordService.hash(student.getPassword().trim()));
+        student.setApproved(true); // Manually added by admin is auto-approved
 
         return studentRepository.save(student);
     }
 
-    // Get all students
+    // Register student (New Student Sign Up)
+    @PostMapping("/register")
+    public Student registerStudent(@RequestBody Student student) {
+        if (student.getName() == null || student.getName().trim().isEmpty()) {
+            throw new RuntimeException("Student name is required");
+        }
+        if (student.getRollNo() == null || student.getRollNo().trim().isEmpty()) {
+            throw new RuntimeException("Roll number is required");
+        }
+        if (student.getEmail() == null || student.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (student.getGroupName() == null || student.getGroupName().trim().isEmpty()) {
+            throw new RuntimeException("Group is required");
+        }
+        if (student.getPassword() == null || student.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (studentRepository.existsByEmail(student.getEmail().trim())) {
+            throw new RuntimeException("Email is already registered");
+        }
+
+        student.setName(student.getName().trim());
+        student.setRollNo(student.getRollNo().trim());
+        student.setEmail(student.getEmail().trim());
+        student.setGroupName(student.getGroupName().trim());
+        student.setPassword(passwordService.hash(student.getPassword().trim()));
+        student.setApproved(false); // Pending approval by admin
+
+        return studentRepository.save(student);
+    }
+
+    // Get all students (Approved only)
     @GetMapping
     public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+        return studentRepository.findByApproved(true);
+    }
+
+    // Get student by roll number
+    @GetMapping("/roll/{rollNo}")
+    public Student getStudentByRollNo(@PathVariable String rollNo) {
+        return studentRepository.findByRollNo(rollNo.trim())
+                .orElseThrow(() -> new RuntimeException("Student not found with roll number: " + rollNo));
     }
 
     // Delete student
@@ -95,7 +135,6 @@ public class StudentController {
     // Total students count
     @GetMapping("/count")
     public long getStudentCount() {
-
-        return studentRepository.count();
+        return studentRepository.findByApproved(true).size();
     }
 }

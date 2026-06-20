@@ -18,6 +18,7 @@ import com.qrattendance.qr_attendance_system.model.Student;
 import com.qrattendance.qr_attendance_system.model.Teacher;
 import com.qrattendance.qr_attendance_system.repository.StudentRepository;
 import com.qrattendance.qr_attendance_system.repository.TeacherRepository;
+import com.qrattendance.qr_attendance_system.repository.UserRepository;
 import com.qrattendance.qr_attendance_system.service.PasswordService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,8 @@ class AdminControllerTest {
     @Mock
     private TeacherRepository teacherRepository;
     @Mock
+    private UserRepository userRepository;
+    @Mock
     private PasswordService passwordService;
 
     @BeforeEach
@@ -46,6 +49,7 @@ class AdminControllerTest {
         AdminController controller = new AdminController();
         ReflectionTestUtils.setField(controller, "studentRepository", studentRepository);
         ReflectionTestUtils.setField(controller, "teacherRepository", teacherRepository);
+        ReflectionTestUtils.setField(controller, "userRepository", userRepository);
         ReflectionTestUtils.setField(controller, "passwordService", passwordService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
@@ -68,6 +72,13 @@ class AdminControllerTest {
         mockMvc.perform(delete("/admin/students/1")).andExpect(content().string("Student Deleted Successfully"));
         verify(studentRepository).save(any(Student.class));
 
+        Teacher teacher = new Teacher();
+        teacher.setName("Prof");
+        teacher.setEmail("prof@example.com");
+        teacher.setSubject("Java");
+        when(teacherRepository.save(any(Teacher.class))).thenReturn(teacher);
+        when(teacherRepository.findById(2L)).thenReturn(Optional.of(teacher));
+
         mockMvc.perform(post("/admin/teachers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Prof\",\"email\":\"prof@example.com\",\"subject\":\"Java\"}"))
@@ -75,6 +86,6 @@ class AdminControllerTest {
                 .andExpect(content().string("Lecturer/Professor Added Successfully"));
         mockMvc.perform(delete("/admin/teachers/2")).andExpect(content().string("Lecturer/Professor Deleted Successfully"));
         verify(teacherRepository).save(any(Teacher.class));
-        verify(teacherRepository).deleteById(2L);
+        verify(teacherRepository).delete(teacher);
     }
 }

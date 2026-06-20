@@ -27,6 +27,8 @@ public class Student {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    private boolean approved;
+
     // Auto set time
     @PrePersist
     public void setCreatedAt() {
@@ -37,6 +39,10 @@ public class Student {
 
     public Long getId() {
         return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -89,5 +95,13 @@ public class Student {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public boolean isApproved() {
+        return approved;
+    }
+
+    public void setApproved(boolean approved) {
+        this.approved = approved;
     }
 }

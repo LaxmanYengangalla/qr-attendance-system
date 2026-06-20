@@ -177,7 +177,12 @@
         .then(async response => {
             const text = await response.text();
             if (!response.ok) {
-                throw new Error("Server rejected the login request");
+                let msg = "Server rejected the login request";
+                try {
+                    const obj = JSON.parse(text);
+                    if (obj.message) msg = obj.message;
+                } catch (e) {}
+                throw new Error(msg);
             }
             return text ? JSON.parse(text) : null;
         })
@@ -208,7 +213,7 @@
         })
         .catch(error => {
             message.style.color = "#ef4444";
-            message.innerText = "Could not sign in. Please refresh and try again.";
+            message.innerText = error.message || "Could not sign in. Please refresh and try again.";
         });
     }
 

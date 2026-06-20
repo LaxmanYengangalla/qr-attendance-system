@@ -177,37 +177,63 @@
         <input type="text" id="name" placeholder="Student Name">
         <input type="text" id="rollNo" placeholder="Roll No">
         <input type="email" id="email" placeholder="Email">
-        <select id="groupName" onchange="filterSubjectsByGroup()">
+        <select id="groupName">
             <option value="">Select Group</option>
-            <option value="MSC Statistics">MSC Statistics</option>
             <option value="MSC Computer Science">MSC Computer Science</option>
-        </select>
-        <select id="courseId">
-            <option value="">Select Group First</option>
+            <option value="MSC Statistics">MSC Statistics</option>
+            <option value="MSC Mathematics">MSC Mathematics</option>
+            <option value="MSC Physics">MSC Physics</option>
+            <option value="MSC Chemistry">MSC Chemistry</option>
+            <option value="MSC Botany">MSC Botany</option>
+            <option value="MSC Zoology">MSC Zoology</option>
+            <option value="MSC Biotechnology">MSC Biotechnology</option>
+            <option value="MSC Microbiology">MSC Microbiology</option>
+            <option value="MSC Data Science">MSC Data Science</option>
+            <option value="MCA">MCA</option>
+            <option value="MBA">MBA</option>
+            <option value="MCOM">MCOM</option>
+            <option value="MA English">MA English</option>
+            <option value="MA Economics">MA Economics</option>
+            <option value="MA Political Science">MA Political Science</option>
         </select>
         <button onclick="addStudent()"><i class="fa-solid fa-plus"></i> Add Student</button>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>S.No</th>
-                <th>Roll No</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Group</th>
-                <th>Subject</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="studentTableBody"></tbody>
-    </table>
+    <div class="form-box">
+        <h3><i class="fa-solid fa-magnifying-glass"></i> Student Lookup</h3>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="text" id="lookupRollNo" placeholder="Enter Roll No" style="margin: 0; flex-grow: 1;">
+            <button onclick="lookupStudent()"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
+            <button onclick="clearLookup()" class="theme-btn" style="background: var(--muted); margin: 0;"><i class="fa-solid fa-xmark"></i> Clear</button>
+        </div>
+        <div id="lookupResult" style="margin-top: 15px; display: none;"></div>
+    </div>
+
+    <h3>Approved Students</h3>
+    <div id="studentTablesContainer"></div>
+
+    <h3 style="margin-top: 40px;">Pending Student Requests</h3>
+    <div id="pendingContainer">
+        <table id="pendingTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Roll No</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Group</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="pendingTableBody"></tbody>
+        </table>
+        <div id="noPendingMessage" style="padding: 15px; background: var(--panel); border: 1px solid rgba(148,163,184,.28); border-radius: 8px; margin-top: 10px;">
+            No pending student requests.
+        </div>
+    </div>
 </div>
 
 <script>
     const API_BASE = window.location.origin;
-    let courseMap = {};
-    let allCourses = [];
 
     if (localStorage.getItem("role") !== "ADMIN") {
         alert("Access Denied");
@@ -219,80 +245,145 @@
     }
 
     function loadStudents() {
-        Promise.all([
-            fetch(`${API_BASE}/students`).then(response => response.json()),
-            fetch(`${API_BASE}/courses`).then(response => response.json())
-        ])
-            .then(([data, courses]) => {
-                courseMap = {};
-                courses.forEach(course => {
-                    courseMap[course.id] = course.courseName;
+        fetch(`${API_BASE}/students`)
+            .then(response => response.json())
+            .then(data => {
+                const grouped = {};
+                data.forEach(student => {
+                    const group = student.groupName || "Not Assigned";
+                    if (!grouped[group]) {
+                        grouped[group] = [];
+                    }
+                    grouped[group].push(student);
                 });
 
-                let rows = "";
+                let html = "";
+                const groupNames = Object.keys(grouped).sort();
 
-                data.forEach((student, index) => {
+                if (groupNames.length === 0) {
+                    html = "<p>No students found</p>";
+                } else {
+                    groupNames.forEach(groupName => {
+                        const studentsInGroup = grouped[groupName];
+                        html += `
+                            <div class="group-section" style="margin-top: 30px; margin-bottom: 20px;">
+                                <h3 style="color: var(--primary); display: flex; align-items: center; gap: 8px; border-bottom: 2px solid var(--primary); padding-bottom: 8px;">
+                                    <i class="fa-solid fa-users"></i> ${groupName}
+                                    <span style="font-size: 13px; font-weight: normal; background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; margin-left: auto;">
+                                        ${studentsInGroup.length} Student${studentsInGroup.length > 1 ? 's' : ''}
+                                    </span>
+                                </h3>
+                                <table style="margin-top: 10px;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 80px;">S.No</th>
+                                            <th>Roll No</th>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th style="width: 120px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+
+                        studentsInGroup.forEach((student, index) => {
+                            html += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td class="roll">${student.rollNo || student.id}</td>
+                                    <td>${student.name}</td>
+                                    <td>${student.email}</td>
+                                    <td>
+                                        <button class="delete-btn" onclick="deleteStudent(${student.id})">
+                                            <i class="fa-solid fa-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+
+                        html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    });
+                }
+
+                document.getElementById("studentTablesContainer").innerHTML = html;
+                loadPendingStudents();
+            })
+            .catch(error => alert("Error loading students"));
+    }
+
+    function loadPendingStudents() {
+        fetch(`${API_BASE}/admin/students/pending`)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById("pendingTableBody");
+                const table = document.getElementById("pendingTable");
+                const message = document.getElementById("noPendingMessage");
+
+                if (data.length === 0) {
+                    table.style.display = "none";
+                    message.style.display = "block";
+                    tbody.innerHTML = "";
+                    return;
+                }
+
+                table.style.display = "table";
+                message.style.display = "none";
+
+                let rows = "";
+                data.forEach(student => {
                     rows += `
                         <tr>
-                            <td>${index + 1}</td>
                             <td class="roll">${student.rollNo || student.id}</td>
                             <td>${student.name}</td>
                             <td>${student.email}</td>
                             <td>${student.groupName || "Not Assigned"}</td>
-                            <td>${courseMap[student.courseId] || "Not Assigned"}</td>
                             <td>
-                                <button class="delete-btn" onclick="deleteStudent(${student.id})">
-                                    <i class="fa-solid fa-trash"></i> Delete
+                                <button onclick="approveStudent(${student.id})">
+                                    <i class="fa-solid fa-check"></i> Approve
+                                </button>
+                                <button class="delete-btn" onclick="rejectStudent(${student.id})">
+                                    <i class="fa-solid fa-xmark"></i> Reject
                                 </button>
                             </td>
                         </tr>
                     `;
                 });
-
-                document.getElementById("studentTableBody").innerHTML =
-                    rows || "<tr><td colspan='7'>No students found</td></tr>";
+                tbody.innerHTML = rows;
             })
-            .catch(error => alert("Error loading students"));
+            .catch(error => alert("Error loading pending requests"));
     }
 
-    function loadCourses() {
-        fetch(`${API_BASE}/courses`)
-            .then(response => response.json())
-            .then(courses => {
-                allCourses = courses;
-                filterSubjectsByGroup();
-            })
-            .catch(error => alert("Error loading subjects"));
+    function approveStudent(id) {
+        fetch(`${API_BASE}/admin/students/${id}/approve`, {
+            method: "POST"
+        })
+        .then(response => response.text())
+        .then(message => {
+            alert(message);
+            loadStudents();
+        })
+        .catch(error => alert("Error approving student"));
     }
 
-    function filterSubjectsByGroup() {
-        const groupName = document.getElementById("groupName").value;
-        const select = document.getElementById("courseId");
-        select.innerHTML = "";
-
-        if (!groupName) {
-            select.innerHTML = "<option value=''>Select Group First</option>";
-            select.disabled = true;
+    function rejectStudent(id) {
+        if (!confirm("Reject this student request?")) {
             return;
         }
 
-        const filteredCourses = allCourses.filter(course =>
-            String(course.groupName || "").toLowerCase() === groupName.toLowerCase()
-        );
-
-        select.disabled = false;
-        select.innerHTML = "<option value=''>Select Subject</option>";
-
-        filteredCourses.forEach(course => {
-            const option = document.createElement("option");
-            option.value = course.id;
-            option.textContent = course.courseName;
-            select.appendChild(option);
-        });
-
-        if (filteredCourses.length === 0) {
-            select.innerHTML = "<option value=''>No subjects available for this group</option>";
-        }
+        fetch(`${API_BASE}/admin/students/pending/${id}`, {
+            method: "DELETE"
+        })
+        .then(response => response.text())
+        .then(message => {
+            alert(message);
+            loadStudents();
+        })
+        .catch(error => alert("Error rejecting request"));
     }
 
     function addStudent() {
@@ -302,18 +393,11 @@
             email: document.getElementById("email").value,
             groupName: document.getElementById("groupName").value,
             password: document.getElementById("rollNo").value,
-            courseId: document.getElementById("courseId").value
-                ? Number(document.getElementById("courseId").value)
-                : null
+            courseId: null
         };
 
         if (!student.name || !student.rollNo || !student.email || !student.groupName) {
             alert("Please enter name, roll no, email, and group");
-            return;
-        }
-
-        if (!student.courseId) {
-            alert("Please select a subject for the selected group");
             return;
         }
 
@@ -329,11 +413,78 @@
             document.getElementById("rollNo").value = "";
             document.getElementById("email").value = "";
             document.getElementById("groupName").value = "";
-            document.getElementById("courseId").value = "";
-            filterSubjectsByGroup();
             loadStudents();
         })
         .catch(error => alert("Error adding student"));
+    }
+
+    function lookupStudent() {
+        const rollNo = document.getElementById("lookupRollNo").value.trim();
+        const resultDiv = document.getElementById("lookupResult");
+        
+        if (!rollNo) {
+            alert("Please enter a roll number");
+            return;
+        }
+        
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = "<p style='color: var(--muted);'><i class='fa-solid fa-spinner fa-spin'></i> Searching...</p>";
+        
+        fetch(`${API_BASE}/students/roll/${encodeURIComponent(rollNo)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Student not found");
+                }
+                return response.json();
+            })
+            .then(student => {
+                const statusHtml = student.approved 
+                    ? "<span style='color: #16a34a; font-weight: bold;'><i class='fa-solid fa-circle-check'></i> Approved</span>" 
+                    : "<span style='color: #d97706; font-weight: bold;'><i class='fa-solid fa-clock'></i> Pending Approval</span>";
+                
+                const dateHtml = student.createdAt 
+                    ? new Date(student.createdAt).toLocaleString() 
+                    : "Unknown";
+
+                resultDiv.innerHTML = `
+                    <div style="padding: 18px; border: 1px solid rgba(148,163,184,.28); border-radius: 8px; background: rgba(79,70,229,.05); margin-top: 10px;">
+                        <h4 style="margin: 0 0 12px 0; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-circle-user"></i> Student Details Found
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                            <p style="margin: 0;"><strong>Name:</strong> ${escapeHtml(student.name)}</p>
+                            <p style="margin: 0;"><strong>Roll No:</strong> ${escapeHtml(student.rollNo)}</p>
+                            <p style="margin: 0;"><strong>Email:</strong> ${escapeHtml(student.email)}</p>
+                            <p style="margin: 0;"><strong>Group:</strong> ${escapeHtml(student.groupName || "Not Assigned")}</p>
+                            <p style="margin: 0;"><strong>Status:</strong> ${statusHtml}</p>
+                            <p style="margin: 0;"><strong>Registered At:</strong> ${dateHtml}</p>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `
+                    <div style="padding: 14px; border: 1px solid rgba(239,68,68,.28); border-radius: 8px; background: rgba(239,68,68,.05); margin-top: 10px; color: var(--danger); font-weight: bold;">
+                        <i class="fa-solid fa-circle-exclamation"></i> No student found with roll number "${escapeHtml(rollNo)}".
+                    </div>
+                `;
+            });
+    }
+
+    function clearLookup() {
+        document.getElementById("lookupRollNo").value = "";
+        const resultDiv = document.getElementById("lookupResult");
+        resultDiv.style.display = "none";
+        resultDiv.innerHTML = "";
+    }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
 
     function deleteStudent(id) {
@@ -360,7 +511,6 @@
         window.location.href = "login.html";
     }
 
-    loadCourses();
     loadStudents();
 </script>
 </body>
