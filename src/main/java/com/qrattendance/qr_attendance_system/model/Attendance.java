@@ -1,5 +1,4 @@
 package com.qrattendance.qr_attendance_system.model;
-import com.qrattendance.qr_attendance_system.model.QrSession;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;

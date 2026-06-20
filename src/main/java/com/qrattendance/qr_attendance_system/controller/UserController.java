@@ -5,17 +5,13 @@ import com.qrattendance.qr_attendance_system.model.User;
 import com.qrattendance.qr_attendance_system.service.PasswordService;
 import com.qrattendance.qr_attendance_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import com.qrattendance.qr_attendance_system.repository.AttendanceRepository;
-import com.qrattendance.qr_attendance_system.repository.CourseRepository;
 import com.qrattendance.qr_attendance_system.repository.StudentRepository;
 import com.qrattendance.qr_attendance_system.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.qrattendance.qr_attendance_system.model.Course;
-import com.qrattendance.qr_attendance_system.repository.StudentCourseRepository;
-import com.qrattendance.qr_attendance_system.repository.QRSessionRepository;
 import jakarta.servlet.http.HttpSession;
 
 import java.util.List;
@@ -36,12 +32,6 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
     // Add user
-    
-    @Autowired
-    private StudentCourseRepository studentCourseRepository;
-
-    @Autowired
-    private QRSessionRepository qrSessionRepository;
     
    
     @PostMapping
@@ -131,7 +121,7 @@ public class UserController {
         // Delete attendance records
         attendanceRepository.deleteByStudentId(id);
 
-        // Delete ser
+        // Delete user
         userRepository.deleteById(id);
 
         return "User deleted successfully";
@@ -170,10 +160,6 @@ public class UserController {
         return userRepository.findByRole(role);
     }
     
-    
     @Autowired
     private AttendanceRepository attendanceRepository;
-
-    @Autowired
-    private CourseRepository courseRepository;
 }

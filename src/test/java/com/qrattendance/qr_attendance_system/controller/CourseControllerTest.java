@@ -63,8 +63,6 @@ class CourseControllerTest {
 
     @Test
     void addCourseRejectsEmptyGroupName() throws Exception {
-        Course course = course("Java", " ", "Dr. Rao");
-
         mockMvc.perform(post("/courses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"courseName\":\"Java\",\"groupName\":\" \",\"lecturerName\":\"Dr. Rao\"}"))

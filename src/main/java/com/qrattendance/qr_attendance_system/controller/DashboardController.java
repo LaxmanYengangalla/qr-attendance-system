@@ -1,11 +1,9 @@
 package com.qrattendance.qr_attendance_system.controller;
-import com.qrattendance.qr_attendance_system.model.User;
 import com.qrattendance.qr_attendance_system.repository.AttendanceRepository;
 import com.qrattendance.qr_attendance_system.repository.CourseRepository;
 import com.qrattendance.qr_attendance_system.repository.StudentRepository;
 import com.qrattendance.qr_attendance_system.repository.TeacherRepository;
 import com.qrattendance.qr_attendance_system.repository.UserRepository;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;

@@ -180,25 +180,6 @@ public class QrSessionController {
                 || "::1".equals(host);
     }
 
-    private String findLanAddress() {
-        try {
-            for (NetworkInterface networkInterface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!networkInterface.isUp() || networkInterface.isLoopback() || networkInterface.isVirtual()) {
-                    continue;
-                }
-
-                for (InetAddress address : Collections.list(networkInterface.getInetAddresses())) {
-                    if (address instanceof Inet4Address && address.isSiteLocalAddress()) {
-                        return address.getHostAddress();
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        return "127.0.0.1";
-    }
-
     private void writeQrImage(String qrData, HttpServletResponse response) throws Exception {
         int width = 300;
         int height = 300;
